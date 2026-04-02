@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
       source: d.source,
       audit_score: d.audit_score,
       classification: d.classification,
+      notes: d.notes,
+      domain: d.domain,
+      strongest_gap: d.strongest_gap,
+      stage_history: d.stage_history || [],
       created_at: d.created_at,
       updated_at: d.updated_at,
     }));
