@@ -7,6 +7,27 @@ export const FALLBACK_STATS = {
   strikeNow: 17,
 } as const;
 
+// Fallback market data — used when Railway API is unavailable
+export const FALLBACK_MARKET_DATA = {
+  status: "open" as const,
+  allocations: { total: 3, remaining: 2, accepted: 1 },
+  floor_price: 15000,
+  deadline: "2026-04-07T03:59:00Z",
+  depth: [
+    { range: "$15K – $20K", count: 3 },
+    { range: "$20K – $30K", count: 2 },
+    { range: "$30K – $50K", count: 1 },
+    { range: "$50K+", count: 0 },
+  ],
+  activity: [
+    { type: "new_request" as const, ago: "2h" },
+    { type: "amount_updated" as const, ago: "6h" },
+    { type: "new_request" as const, ago: "1d" },
+  ],
+  total_requests: 6,
+  last_activity: "2026-04-02T14:30:00Z",
+} as const;
+
 // Deadline: Monday, April 6 at 11:59 PM ET = UTC 2026-04-07T03:59:00Z
 export const DEADLINE_UTC = "2026-04-07T03:59:00Z";
 

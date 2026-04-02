@@ -7,6 +7,9 @@ import { MarketTicker } from "@/components/market-ticker";
 import { Hero } from "@/components/sections/hero";
 import { VideoStage } from "@/components/sections/video-stage";
 import { Receipts } from "@/components/sections/receipts";
+import { Offerings } from "@/components/sections/offerings";
+import { MarketSection } from "@/components/sections/market-section";
+import { MarketStatus } from "@/components/market/market-status";
 import { BidSection } from "@/components/sections/bid-section";
 import { DeadlineSection } from "@/components/sections/deadline-section";
 import { ExpiredState } from "@/components/sections/expired-state";
@@ -92,12 +95,17 @@ export default function PartnersPage() {
       {bootComplete && (
         <>
           <MarketTicker visible={bootComplete} />
+          <MarketStatus visible={bootComplete && !expired} />
           <main id="main-content" className="animate-[fadeIn_0.5s_ease-out] pt-10">
           <Hero liveData={liveData} />
           <div className="w-16 h-px bg-accent/40 mx-auto" />
           <VideoStage />
           <div className="w-16 h-px bg-accent/40 mx-auto" />
           <Receipts />
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
+          <Offerings />
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
+          <MarketSection />
           <div className="w-16 h-px bg-accent/40 mx-auto" />
 
           {expired ? (

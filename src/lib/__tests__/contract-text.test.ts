@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderContractText, getContractVersion } from "../contract-text";
+import { renderContractText, getContractVersion, getContractSections } from "../contract-text";
 
 describe("contract-text", () => {
   it("returns correct contract version", () => {
@@ -22,7 +22,24 @@ describe("contract-text", () => {
     expect(text).toContain("April 2, 2026");
     expect(text).toContain("Q2-2026-v2.0");
     expect(text).toContain("ESIGN Act");
+    expect(text).toContain("OFFERING MEMORANDUM");
     expect(text).toContain("PARTNERSHIP AGREEMENT");
+  });
+
+  it("has 12 contract sections", () => {
+    const sections = getContractSections({
+      bidderName: "Jane Doe",
+      bidderTitle: "VP Marketing",
+      bidderCompany: "Acme Freight",
+      bidAmount: 25000,
+      date: "April 2, 2026",
+    });
+
+    expect(sections).toHaveLength(12);
+    expect(sections[0].id).toBe("memorandum");
+    expect(sections[5].id).toBe("benchmarks");
+    expect(sections[8].id).toBe("risk-factors");
+    expect(sections[11].id).toBe("esign");
   });
 
   it("formats large bid amounts correctly", () => {

@@ -17,7 +17,7 @@ export interface ContractSection {
   summary: string;
   /** Full legal text */
   body: string;
-  /** Sections 1-5 are expanded by default, 6-10 collapsed */
+  /** Sections 1-6 are expanded by default, 7-12 collapsed */
   defaultOpen: boolean;
 }
 
@@ -34,8 +34,16 @@ export function getContractSections(params: ContractParams): ContractSection[] {
 
   return [
     {
-      id: "parties",
+      id: "memorandum",
       number: 1,
+      title: "Offering Memorandum Reference",
+      summary: `Q2 2026 GTM Engine — ${params.tier ? TIERS[params.tier].name : "Partnership"} allocation.`,
+      body: `This Agreement references the Q2 2026 Offering Memorandum published by DWTB?! Studios LLC. The offering covers a limited allocation of partnership slots for signal-driven go-to-market services targeting enterprise B2B freight and logistics companies.\n\nTier: ${params.tier ? TIERS[params.tier].name : "Full GTM Engine"} — Q2 2026 Partnership\nAllocation requested: ${amountFormatted}`,
+      defaultOpen: true,
+    },
+    {
+      id: "parties",
+      number: 2,
       title: "Parties",
       summary: `Between DWTB?! Studios and ${params.bidderCompany}.`,
       body: `Provider: DWTB?! Studios LLC, a signal-driven go-to-market engine serving enterprise B2B freight and logistics companies.\n\nClient: ${params.bidderCompany}, represented by ${params.bidderName} (${params.bidderTitle}).`,
@@ -43,7 +51,7 @@ export function getContractSections(params: ContractParams): ContractSection[] {
     },
     {
       id: "term",
-      number: 2,
+      number: 3,
       title: "Term",
       summary: "April 1 – June 30, 2026. Full quarter.",
       body: "This Agreement covers the Q2 2026 engagement period: April 1, 2026 through June 30, 2026. Services begin upon acceptance and mutual confirmation of the engagement start date.",
@@ -51,7 +59,7 @@ export function getContractSections(params: ContractParams): ContractSection[] {
     },
     {
       id: "scope",
-      number: 3,
+      number: 4,
       title: "What You Get",
       summary: params.tier
         ? `${TIERS[params.tier].name} tier — ${TIERS[params.tier].signalPages} signal pages, ${TIERS[params.tier].targetAudits} audits, ${TIERS[params.tier].emailsGenerated} emails, and more.`
@@ -63,15 +71,23 @@ export function getContractSections(params: ContractParams): ContractSection[] {
     },
     {
       id: "investment",
-      number: 4,
+      number: 5,
       title: "Investment",
       summary: `${amountFormatted} total — 50% on acceptance, 50% at midpoint (May 15).`,
       body: `The Client submits an allocation request of ${amountFormatted} for a Q2 2026 partnership slot. This amount represents the total engagement fee for the Q2 term.\n\nPayment terms upon acceptance:\n• 50% due within 7 business days of acceptance\n• 50% due at the midpoint of the engagement (May 15, 2026)\n\nDWTB?! Studios reserves the right to accept, decline, or waitlist any request at its sole discretion.`,
       defaultOpen: true,
     },
     {
+      id: "benchmarks",
+      number: 6,
+      title: "Performance Benchmarks",
+      summary: "Q1 2026 operational proof: 38 proposals shipped, $635K pipeline.",
+      body: "DWTB?! Studios has shipped 38 proposals, generated $635K in qualified pipeline, across 6 active accounts in Q1 2026. These benchmarks reflect operational throughput during the first quarter of operations.\n\nPast performance is not a guarantee of future results. Actual engagement outcomes depend on market conditions, target account responsiveness, and mutual collaboration between Provider and Client.",
+      defaultOpen: true,
+    },
+    {
       id: "acceptance",
-      number: 5,
+      number: 7,
       title: "Acceptance",
       summary: "Max 3 clients per quarter. You'll hear back within 48 hours.",
       body: "DWTB?! Studios operates with a maximum of 3 client slots per quarter. Submission of a signed request does not guarantee acceptance. Slots are reserved only upon explicit written acceptance by DWTB?! Studios.\n\nUpon acceptance, the Client will receive written confirmation and an onboarding schedule within 48 hours.",
@@ -79,23 +95,23 @@ export function getContractSections(params: ContractParams): ContractSection[] {
     },
     {
       id: "confidentiality",
-      number: 6,
+      number: 8,
       title: "Confidentiality",
       summary: "Both sides keep proprietary info private. 12 months post-engagement.",
       body: "Both parties agree to maintain the confidentiality of proprietary information shared during the engagement, including but not limited to: target account lists, campaign strategies, signal data, and performance metrics.\n\nThis obligation survives termination of this Agreement for a period of 12 months.",
       defaultOpen: false,
     },
     {
-      id: "liability",
-      number: 7,
-      title: "Liability",
+      id: "risk-factors",
+      number: 9,
+      title: "Risk Factors and Limitations",
       summary: `Capped at ${amountFormatted}. No indirect damages.`,
-      body: `DWTB?! Studios' total liability under this Agreement shall not exceed the total amount paid by the Client. Neither party shall be liable for indirect, incidental, or consequential damages.`,
+      body: `DWTB?! Studios' total liability under this Agreement shall not exceed the total amount paid by the Client. Neither party shall be liable for indirect, incidental, or consequential damages.\n\nThe Client acknowledges that go-to-market outcomes depend on variables outside the Provider's control, including but not limited to: macroeconomic conditions, industry regulations, internal client processes, and target account decision cycles.`,
       defaultOpen: false,
     },
     {
       id: "termination",
-      number: 8,
+      number: 10,
       title: "Termination",
       summary: "30 days written notice. Prorated refund for undelivered services.",
       body: "Either party may terminate this Agreement with 30 days' written notice. In the event of early termination by the Client, fees paid for services already rendered are non-refundable. DWTB?! Studios will provide a prorated refund for services not yet delivered.",
@@ -103,7 +119,7 @@ export function getContractSections(params: ContractParams): ContractSection[] {
     },
     {
       id: "governing-law",
-      number: 9,
+      number: 11,
       title: "Governing Law",
       summary: "New York State.",
       body: "This Agreement shall be governed by and construed in accordance with the laws of the State of New York, without regard to its conflict of law provisions.",
@@ -111,7 +127,7 @@ export function getContractSections(params: ContractParams): ContractSection[] {
     },
     {
       id: "esign",
-      number: 10,
+      number: 12,
       title: "Electronic Signature",
       summary: "Your e-signature is legally binding under the ESIGN Act.",
       body: `By typing your full name and providing your electronic signature below, you acknowledge and agree that:\n\n(a) Your electronic signature has the same legal effect as a handwritten signature under the ESIGN Act (15 U.S.C. § 7001 et seq.).\n\n(b) You have reviewed this Agreement in its entirety and understand its terms.\n\n(c) You consent to conduct this transaction electronically.\n\n(d) You will receive a copy of this signed Agreement for your records.\n\n(e) This signed request, if accepted by DWTB?! Studios, constitutes a binding agreement at the submitted amount of ${amountFormatted}.`,
@@ -129,7 +145,7 @@ export function renderContractText(params: ContractParams): string {
     minimumFractionDigits: 0,
   }).format(params.bidAmount);
 
-  const header = `Q2 2026 PARTNERSHIP AGREEMENT
+  const header = `OFFERING MEMORANDUM — Q2 2026 PARTNERSHIP AGREEMENT
 Version: ${CONTRACT_VERSION}
 
 This Partnership Agreement ("Agreement") is entered into as of ${params.date} by and between:
