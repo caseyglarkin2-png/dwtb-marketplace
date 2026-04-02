@@ -1,10 +1,11 @@
-import { CONTRACT_VERSION } from "./constants";
+import { CONTRACT_VERSION, TIERS, type TierId } from "./constants";
 
 export interface ContractParams {
   bidderName: string;
   bidderTitle: string;
   bidderCompany: string;
   bidAmount: number;
+  tier?: TierId;
   date: string; // formatted date string
 }
 
@@ -52,8 +53,12 @@ export function getContractSections(params: ContractParams): ContractSection[] {
       id: "scope",
       number: 3,
       title: "What You Get",
-      summary: "Signal research, target ID, custom assets, campaign execution, performance tracking.",
-      body: "DWTB?! Studios will provide the Client with access to its GTM engine, including:\n\n• Account-level signal research and monitoring\n• Target account identification and prioritization\n• Custom asset production (proposals, one-pagers, campaign materials)\n• Campaign direction and deployment strategy\n• Performance tracking and pipeline attribution\n\nSpecific deliverables and cadence will be determined during onboarding.",
+      summary: params.tier
+        ? `${TIERS[params.tier].name} tier — ${TIERS[params.tier].signalPages} signal pages, ${TIERS[params.tier].targetAudits} audits, ${TIERS[params.tier].emailsGenerated} emails, and more.`
+        : "Signal research, target ID, custom assets, campaign execution, performance tracking.",
+      body: params.tier
+        ? `DWTB?! Studios will provide the Client with the ${TIERS[params.tier].name} package, including:\n\n• ${TIERS[params.tier].signalPages} Signal Intelligence pages\n• ${TIERS[params.tier].targetAudits} target account audits with battlecards\n• ${TIERS[params.tier].emailsGenerated} personalized outreach emails\n• ${TIERS[params.tier].contentPerMonth} content pieces per month\n• ${TIERS[params.tier].creativePerMonth} creative assets per month\n• Service packages: ${TIERS[params.tier].servicePackages}\n• Reporting: ${TIERS[params.tier].reporting}\n• Competitor audits: ${TIERS[params.tier].competitorAudits}\n• Casey access: ${TIERS[params.tier].caseyAccess}\n• Re-scoring: ${TIERS[params.tier].rescoring}\n\nTerm: ${TIERS[params.tier].termMonths} months. Specific cadence determined during onboarding.`
+        : "DWTB?! Studios will provide the Client with access to its GTM engine, including:\n\n• Account-level signal research and monitoring\n• Target account identification and prioritization\n• Custom asset production (proposals, one-pagers, campaign materials)\n• Campaign direction and deployment strategy\n• Performance tracking and pipeline attribution\n\nSpecific deliverables and cadence will be determined during onboarding.",
       defaultOpen: true,
     },
     {

@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import {
-  DEFAULT_MIN_BID,
-  DEFAULT_MIN_INCREMENT,
   DEFAULT_ACCEPTED_SLOTS,
   DEFAULT_TOTAL_SLOTS,
   DEADLINE_UTC,
@@ -13,8 +11,6 @@ import { useInView } from "@/lib/hooks/use-in-view";
 
 export function BidSection() {
   const { ref, isInView } = useInView();
-  const [minBid, setMinBid] = useState(DEFAULT_MIN_BID);
-  const [minIncrement, setMinIncrement] = useState(DEFAULT_MIN_INCREMENT);
   const [remainingSlots, setRemainingSlots] = useState(
     DEFAULT_TOTAL_SLOTS - DEFAULT_ACCEPTED_SLOTS
   );
@@ -28,10 +24,6 @@ export function BidSection() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {
-          if (typeof data.current_min_bid === "number")
-            setMinBid(data.current_min_bid);
-          if (typeof data.min_increment === "number")
-            setMinIncrement(data.min_increment);
           if (typeof data.remaining_slots === "number")
             setRemainingSlots(data.remaining_slots);
           if (typeof data.total_slots === "number")
@@ -41,9 +33,7 @@ export function BidSection() {
             setManuallyClosed(data.manually_closed);
         }
       })
-      .catch(() => {
-        // Keep defaults
-      })
+      .catch(() => {})
       .finally(() => setSlotsLoaded(true));
   }, []);
 
@@ -65,12 +55,15 @@ export function BidSection() {
 
   return (
     <section id="bid" ref={ref as React.RefObject<HTMLElement>} className={`py-24 md:py-32 px-6 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 tracking-tight">
-          Request Allocation
+          Choose Your Tier
         </h2>
-        <p className="text-white/40 text-lg mb-12">
-          4 steps. ~3 minutes. Plain-language agreement. No lawyers needed.
+        <p className="text-white/40 text-lg mb-4">
+          3 slots. 3 tiers. The full system pointed at YOUR market.
+        </p>
+        <p className="text-white/30 text-sm mb-12 font-mono">
+          Bidding is live. Buy It Now window is limited.
         </p>
 
         {!slotsLoaded ? (
@@ -80,8 +73,6 @@ export function BidSection() {
           </div>
         ) : (
           <BidFlow
-            minBid={minBid}
-            minIncrement={minIncrement}
             remainingSlots={remainingSlots}
             totalSlots={totalSlots}
             deadline={deadline}

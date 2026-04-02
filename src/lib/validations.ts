@@ -14,6 +14,7 @@ export const bidSubmissionSchema = z.object({
   bidder_company: safeString(2, "Company must be at least 2 characters"),
   bidder_email: z.string().email("Invalid email address").max(255),
   bid_amount: z.number().positive("Bid must be positive"),
+  tier: z.enum(["founding", "growth", "enterprise"]).optional(),
   note: z
     .string()
     .max(2000)

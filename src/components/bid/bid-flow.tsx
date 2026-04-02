@@ -5,10 +5,9 @@ import ContractPreview from "./contract-preview";
 import ConsentCapture from "./consent-capture";
 import BidConfirmation from "./bid-confirmation";
 import { track } from "@/lib/analytics";
+import { TIERS, TIER_ORDER, type TierId } from "@/lib/constants";
 
 interface BidFlowProps {
-  minBid: number;
-  minIncrement: number;
   remainingSlots: number;
   totalSlots: number;
   deadline: string;
@@ -82,19 +81,27 @@ function clearDraft() {
   try {
     localStorage.removeItem(DRAFT_KEY);
     localStorage.removeItem(IDEM_KEY);
+    localStorage.removeItem("dwtb_bid_tier");
   } catch {
     // Ignore
   }
 }
 
 export default function BidFlow({
-  minBid,
-  minIncrement,
   remainingSlots,
   totalSlots,
   deadline,
 }: BidFlowProps) {
   const [step, setStep] = useState(1);
+  const [selectedTier, setSelectedTier] = useState<TierId | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const v = localStorage.getItem("dwtb_bid_tier");
+      if (v === "founding" || v === "growth" || v === "enterprise") return v;
+    } catch {}
+    return null;
+  });
+  const [isBuyItNow, setIsBuyItNow] = useState(false);
   const [bidder, setBidder] = useState<BidderInfo>(() => {
     const draft = loadDraft();
     return {
@@ -102,7 +109,7 @@ export default function BidFlow({
       title: draft.title || "",
       company: draft.company || "",
       email: draft.email || "",
-      amount: draft.amount || minBid,
+      amount: draft.amount || 0,
       note: draft.note || "",
     };
   });
@@ -153,15 +160,23 @@ export default function BidFlow({
     []
   );
 
-  // Step 1 validation
-  const step1Valid =
+  const tierFloor = selectedTier ? TIERS[selectedTier].bidFloor : 0;
+
+  // Save tier choice
+  useEffect(() => {
+    if (selectedTier) {
+      try { localStorage.setItem("dwtb_bid_tier", selectedTier); } catch {}
+    }
+  }, [selectedTier]);
+
+  // Step 2 validation (details + amount)
+  const detailsValid =
     bidder.name.length >= 2 &&
     bidder.title.length >= 2 &&
     bidder.company.length >= 2 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bidder.email);
-
-  // Step 2 validation
-  const step2Valid = bidder.amount >= minBid;
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bidder.email) &&
+    bidder.amount >= tierFloor &&
+    tierFloor > 0;
 
   const handleSubmit = async () => {
     if (!signData) return;
@@ -180,6 +195,7 @@ export default function BidFlow({
           bidder_company: bidder.company,
           bidder_email: bidder.email,
           bid_amount: bidder.amount,
+          tier: selectedTier,
           note: bidder.note || undefined,
           typed_name: signData.typedName,
           consent_given: signData.consentGiven,
@@ -275,7 +291,7 @@ export default function BidFlow({
         {/* Step indicator */}
       <nav aria-label={`Step ${step} of 4`} className="flex items-center justify-center gap-2">
         {[
-          { n: 1, label: "Offering" },
+          { n: 1, label: "Tier" },
           { n: 2, label: "Details" },
           { n: 3, label: "Agreement" },
           { n: 4, label: "Confirm" },
@@ -302,67 +318,91 @@ export default function BidFlow({
         ))}
       </nav>
 
-      {/* Step 1: Review Offering */}
+      {/* Step 1: Choose Tier */}
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-xl font-bold text-white">The Offering</h3>
+            <h3 className="text-xl font-bold text-white">Select Your Tier</h3>
             <p className="text-sm text-white/40 mt-1">
-              Q2 2026 GTM Engine — review the terms, then request your allocation.
+              {remainingSlots} of {totalSlots} slots remaining · Closes {deadlineFormatted}
             </p>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm p-6 space-y-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-white/50">Engagement</span>
-              <span className="text-white">
-                Full GTM Engine — Q2 2026
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-white/50">Allocations remaining</span>
-              <span className="text-accent font-mono font-semibold">
-                {remainingSlots} of {totalSlots}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-white/50">Floor price</span>
-              <span className="text-white font-mono">
-                ${minBid.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-white/50">Offering closes</span>
-              <span className="text-white font-mono">{deadlineFormatted}</span>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-white/8 bg-white/[0.02] p-4">
-            <p className="text-xs text-white/50 font-mono uppercase tracking-wider mb-2">
-              What's included
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {[
-                "Signal research & monitoring",
-                "Target account identification",
-                "Custom asset production",
-                "Campaign deployment strategy",
-                "Performance tracking & attribution",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-2 text-sm text-white/60">
-                  <span className="text-accent text-xs">✓</span>
-                  {item}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {TIER_ORDER.map((tid) => {
+              const t = TIERS[tid];
+              const isSelected = selectedTier === tid;
+              return (
+                <div
+                  key={tid}
+                  className={`relative rounded-lg border p-5 space-y-4 transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-accent bg-accent/5 ring-1 ring-accent/30"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  }`}
+                  onClick={() => {
+                    setSelectedTier(tid);
+                    setIsBuyItNow(false);
+                    setBidder((prev) => ({ ...prev, amount: t.bidFloor }));
+                  }}
+                >
+                  {tid === "growth" && (
+                    <span className="absolute -top-2.5 left-4 bg-accent text-black text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded">
+                      Most Popular
+                    </span>
+                  )}
+                  <div>
+                    <h4 className="text-lg font-bold text-white">{t.name}</h4>
+                    <p className="text-xs text-white/30 font-mono">{t.slotLabel} · {t.termMonths}-month term</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-white font-mono">
+                      ${t.bidFloor.toLocaleString()}<span className="text-sm text-white/40 font-normal">/mo</span>
+                    </p>
+                    <p className="text-xs text-white/30 font-mono">Floor — or bid higher</p>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {t.highlights.map((h) => (
+                      <li key={h} className="flex items-start gap-2 text-xs text-white/60">
+                        <span className="text-accent text-xs mt-0.5">✓</span>
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="space-y-2 pt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTier(tid);
+                        setIsBuyItNow(false);
+                        setBidder((prev) => ({ ...prev, amount: t.bidFloor }));
+                        setStep(2);
+                      }}
+                      className={`w-full rounded-lg px-4 py-2.5 min-h-[44px] font-semibold text-sm transition-all ${
+                        isSelected
+                          ? "bg-accent text-black hover:opacity-90"
+                          : "bg-white/10 text-white hover:bg-white/15"
+                      }`}
+                    >
+                      Select & Continue →
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTier(tid);
+                        setIsBuyItNow(true);
+                        setBidder((prev) => ({ ...prev, amount: t.buyItNow }));
+                        setStep(2);
+                      }}
+                      className="w-full rounded-lg border border-accent/30 px-4 py-2 min-h-[40px] text-accent text-xs font-mono hover:bg-accent/5 transition-all"
+                    >
+                      Buy It Now · ${t.buyItNow.toLocaleString()}/mo
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-
-          <button
-            onClick={() => setStep(2)}
-            className="w-full rounded-lg bg-accent px-6 py-3 min-h-[48px] font-semibold text-black transition-all duration-300 hover:opacity-90 active:scale-[0.98] hover:shadow-[0_0_30px_rgba(0,255,194,0.2)]"
-          >
-            Request Allocation →
-          </button>
         </div>
       )}
 
@@ -375,6 +415,22 @@ export default function BidFlow({
               Takes about 60 seconds. Your draft auto-saves.
             </p>
           </div>
+
+          {/* Selected tier banner */}
+          {selectedTier && (
+            <div className="rounded-lg border border-accent/20 bg-accent/5 px-4 py-3 flex items-center justify-between">
+              <div>
+                <span className="text-xs text-white/40 font-mono uppercase tracking-wider">Selected tier</span>
+                <p className="text-sm text-white font-semibold">{TIERS[selectedTier].name}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-white font-mono">
+                  {isBuyItNow ? `$${TIERS[selectedTier].buyItNow.toLocaleString()}/mo` : `$${tierFloor.toLocaleString()}/mo floor`}
+                </p>
+                {isBuyItNow && <span className="text-[10px] text-accent font-mono">BUY IT NOW</span>}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -460,18 +516,18 @@ export default function BidFlow({
                   onChange={(e) =>
                     updateBidder("amount", Number(e.target.value))
                   }
-                  min={minBid}
-                  step={minIncrement}
+                  min={tierFloor}
+                  step={500}
                   aria-required="true"
                   className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 pl-8 text-white text-lg font-mono placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
               <p className="mt-1 text-xs text-white/30 font-mono">
-                Floor: ${minBid.toLocaleString()} · 50% on acceptance, 50% at midpoint
+                {selectedTier && TIERS[selectedTier].name} floor: ${tierFloor.toLocaleString()}/mo · 50% on acceptance, 50% at midpoint
               </p>
-              {bidder.amount > 0 && bidder.amount < minBid && (
+              {bidder.amount > 0 && bidder.amount < tierFloor && (
                 <p className="mt-1 text-sm text-red-400">
-                  Floor price is ${minBid.toLocaleString()}
+                  Floor price for this tier is ${tierFloor.toLocaleString()}/mo
                 </p>
               )}
             </div>
@@ -501,7 +557,7 @@ export default function BidFlow({
             </button>
             <button
               onClick={() => setStep(3)}
-              disabled={!step1Valid || !step2Valid}
+              disabled={!detailsValid}
               className="flex-1 rounded-lg bg-accent px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               Review Agreement →
@@ -543,6 +599,7 @@ export default function BidFlow({
               bidderTitle: bidder.title,
               bidderCompany: bidder.company,
               bidAmount: bidder.amount,
+              tier: selectedTier || undefined,
               date: new Date().toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
@@ -594,13 +651,13 @@ export default function BidFlow({
 
           <div className="rounded-lg border border-accent/20 bg-accent/5 p-8 text-center space-y-2">
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
-              Allocation request
+              {selectedTier ? TIERS[selectedTier].name : "Allocation request"}{isBuyItNow ? " · Buy It Now" : ""}
             </p>
             <p className="text-4xl font-bold text-white font-mono">
-              {amountFormatted}
+              {amountFormatted}<span className="text-lg text-white/40">/mo</span>
             </p>
             <p className="text-sm text-white/40">
-              Binding if accepted · 50% due on acceptance · 50% May 15
+              {selectedTier ? `${TIERS[selectedTier].termMonths}-month term` : ""} · Binding if accepted · 50% due on acceptance · 50% May 15
             </p>
           </div>
 
@@ -620,6 +677,12 @@ export default function BidFlow({
           )}
 
           <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-2 text-sm">
+            {selectedTier && (
+              <div className="flex justify-between">
+                <span className="text-white/40">Tier</span>
+                <span className="text-white">{TIERS[selectedTier].name}{isBuyItNow ? " (BIN)" : ""}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-white/40">Name</span>
               <span className="text-white">{bidder.name}</span>

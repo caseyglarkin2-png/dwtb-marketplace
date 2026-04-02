@@ -4,7 +4,7 @@ import { generateSignatureHash } from "@/lib/crypto";
 import { getContractVersion } from "@/lib/contract-text";
 import { appendAuditEntry } from "@/lib/audit";
 import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
-import { DEADLINE_UTC, DEFAULT_MIN_BID } from "@/lib/constants";
+import { DEADLINE_UTC, DEFAULT_MIN_BID, TIERS } from "@/lib/constants";
 import { createBid } from "@/lib/clawd";
 
 const MAX_BID_AMOUNT = Number(process.env.MAX_BID_AMOUNT) || 500000;
@@ -84,12 +84,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Min bid check
-  if (data.bid_amount < DEFAULT_MIN_BID) {
+  // Min bid check (tier-aware)
+  const tierFloor = data.tier && TIERS[data.tier] ? TIERS[data.tier].bidFloor : DEFAULT_MIN_BID;
+  if (data.bid_amount < tierFloor) {
     return NextResponse.json(
       {
         error: "BELOW_MIN_BID",
-        message: `Bid must be at least $${DEFAULT_MIN_BID.toLocaleString()}.`,
+        message: `Bid must be at least $${tierFloor.toLocaleString()} for the ${data.tier ? TIERS[data.tier].name : "selected"} tier.`,
       },
       { status: 400 }
     );
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
       company: data.bidder_company,
       title: data.bidder_title,
       bid_amount: data.bid_amount,
-      message: data.note || "",
+      message: [data.tier ? `Tier: ${data.tier}` : "", data.note || ""].filter(Boolean).join(" | "),
       agreement_accepted: data.consent_given,
       consent_hash: await generateSignatureHash({
         contractVersion,
@@ -189,6 +190,7 @@ export async function POST(request: NextRequest) {
     bidderCompany: data.bidder_company,
     bidderEmail: data.bidder_email,
     bidAmount: data.bid_amount,
+    tier: data.tier,
     note: data.note,
     contractVersion,
     signedAt,
@@ -213,6 +215,7 @@ async function sendBidEmails(bid: {
   bidderCompany: string;
   bidderEmail: string;
   bidAmount: number;
+  tier?: string;
   note?: string;
   contractVersion: string;
   signedAt: string;
@@ -236,7 +239,7 @@ async function sendBidEmails(bid: {
       body: JSON.stringify({
         from: "DWTB?! Studios <bids@dwtb.dev>",
         to: [adminEmail],
-        subject: `New Bid: $${bid.bidAmount.toLocaleString()} from ${bid.bidderCompany}`,
+        subject: `New Bid: $${bid.bidAmount.toLocaleString()} from ${bid.bidderCompany}${bid.tier ? ` (${bid.tier})` : ""}`,
         text: [
           `New bid submitted for ${bid.contractVersion}`,
           ``,
@@ -244,7 +247,8 @@ async function sendBidEmails(bid: {
           `Title: ${bid.bidderTitle}`,
           `Company: ${bid.bidderCompany}`,
           `Email: ${bid.bidderEmail}`,
-          `Amount: $${bid.bidAmount.toLocaleString()}`,
+          `Amount: $${bid.bidAmount.toLocaleString()}/mo`,
+          `Tier: ${bid.tier || "(none)"}`,
           `Note: ${bid.note || "(none)"}`,
           ``,
           `Bid ID: ${bid.bidId}`,

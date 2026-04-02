@@ -49,15 +49,15 @@ export function Hero({ liveData }: HeroProps) {
 
       {/* Headline */}
       <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight max-w-4xl tracking-tight">
-        {remainingSlots} of {totalSlots} Allocations Remaining.{" "}
-        <span className="text-accent">Q2 2026 GTM Engine.</span>
+        {remainingSlots} of {totalSlots} Slots Open.{" "}
+        <span className="text-accent">3 Tiers. 1 System.</span>
       </h1>
 
       {/* Subline */}
       <p className="mt-6 text-lg md:text-xl text-text-secondary max-w-2xl leading-relaxed font-light tracking-wide">
         DWTB?! Studios is the signal-driven GTM engine for enterprise B2B
-        freight marketing. {totalSlots} partnership allocations per quarter. {totalSlots - remainingSlots} {totalSlots - remainingSlots === 1 ? "is" : "are"} spoken for.
-        You are looking at the last {remainingSlots}.
+        freight marketing. 3 tiers — Founding, Growth, Enterprise — starting at $7,500/mo.
+        {totalSlots - remainingSlots > 0 ? ` ${totalSlots - remainingSlots} ${totalSlots - remainingSlots === 1 ? "slot is" : "slots are"} spoken for.` : ""}
       </p>
 
       {/* CTA */}
@@ -66,7 +66,7 @@ export function Hero({ liveData }: HeroProps) {
         onClick={() => track("cta_click", { location: "hero" })}
         className="mt-10 inline-flex items-center gap-2 px-8 py-4 min-h-[48px] bg-accent text-surface font-semibold text-lg rounded-lg hover:bg-accent/90 transition-all duration-300 active:scale-[0.98] hover:shadow-[0_0_30px_rgba(0,255,194,0.2)]"
       >
-        Review Offering + Request Allocation
+        Choose Your Tier
       </a>
 
       {/* Social proof micro-copy */}

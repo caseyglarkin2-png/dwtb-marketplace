@@ -3,7 +3,7 @@ import { renderContractText, getContractVersion } from "../contract-text";
 
 describe("contract-text", () => {
   it("returns correct contract version", () => {
-    expect(getContractVersion()).toBe("Q2-2026-v1.0");
+    expect(getContractVersion()).toBe("Q2-2026-v2.0");
   });
 
   it("renders contract with interpolated values", () => {
@@ -20,7 +20,7 @@ describe("contract-text", () => {
     expect(text).toContain("Acme Freight");
     expect(text).toContain("$25,000");
     expect(text).toContain("April 2, 2026");
-    expect(text).toContain("Q2-2026-v1.0");
+    expect(text).toContain("Q2-2026-v2.0");
     expect(text).toContain("ESIGN Act");
     expect(text).toContain("PARTNERSHIP AGREEMENT");
   });
