@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
 import { appendAuditEntry } from "@/lib/audit";
 import {
-  getLeadById,
-  updateLeadMeta,
-  updateLeadStatus,
-  extractBidRecord,
+  getBid,
+  updateBid,
+  toBidRecord,
 } from "@/lib/clawd";
 import { renderContractText } from "@/lib/contract-text";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/lib/pdf";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
+  pending: ["accepted", "declined", "waitlisted"],
   submitted: ["accepted", "declined", "waitlisted"],
   waitlisted: ["accepted", "declined"],
   accepted: ["paid", "declined"],
@@ -47,15 +47,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Status required" }, { status: 400 });
   }
 
-  // Fetch current bid from Clawd
-  let lead;
+  // Fetch current bid from Clawd marketplace API
+  let clawdBid;
   try {
-    lead = await getLeadById(bidId);
+    clawdBid = await getBid(bidId);
   } catch {
     return NextResponse.json({ error: "Bid not found" }, { status: 404 });
   }
 
-  const bid = extractBidRecord(lead);
+  const bid = toBidRecord(clawdBid);
 
   // Validate transition
   const allowedNext = VALID_TRANSITIONS[bid.status];
@@ -70,21 +70,9 @@ export async function PATCH(
   }
 
   const now = new Date().toISOString();
-  const metaUpdate: Record<string, unknown> = {
-    bid_status: newStatus,
-  };
-
-  if (newStatus === "accepted") {
-    metaUpdate.accepted_at = now;
-  }
-
-  if (newStatus === "paid") {
-    metaUpdate.paid_at = now;
-  }
 
   // Persist status update to Clawd
-  await updateLeadMeta(bidId, metaUpdate);
-  await updateLeadStatus(bidId, newStatus);
+  await updateBid(bidId, { status: newStatus });
 
   // Audit trail
   appendAuditEntry({

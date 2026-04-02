@@ -5,7 +5,7 @@ import { getContractVersion } from "@/lib/contract-text";
 import { appendAuditEntry } from "@/lib/audit";
 import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { DEADLINE_UTC, DEFAULT_MIN_BID } from "@/lib/constants";
-import { createLead } from "@/lib/clawd";
+import { createBid } from "@/lib/clawd";
 
 const MAX_BID_AMOUNT = Number(process.env.MAX_BID_AMOUNT) || 500000;
 
@@ -109,24 +109,28 @@ export async function POST(request: NextRequest) {
   const contractVersion = getContractVersion();
   const signedAt = new Date().toISOString();
 
-  // Submit to Clawd as a lead
+  // Submit to Clawd via marketplace bid API
   let bidId: string;
   try {
-    const clawdRes = await createLead({
+    const clawdRes = await createBid({
       name: data.bidder_name,
       email: data.bidder_email,
       company: data.bidder_company,
-      source: "dwtb_marketplace",
-      intent: "bid",
-      meta: {
-        bid_amount: data.bid_amount,
-        bidder_title: data.bidder_title,
-        note: data.note,
-        contract_version: contractVersion,
-        signed_at: signedAt,
-      },
+      title: data.bidder_title,
+      bid_amount: data.bid_amount,
+      message: data.note || "",
+      agreement_accepted: data.consent_given,
+      consent_hash: await generateSignatureHash({
+        contractVersion,
+        bidId: "pending",
+        signerName: data.bidder_name,
+        signerEmail: data.bidder_email,
+        bidAmount: data.bid_amount,
+        typedName: data.typed_name,
+        signedAt,
+      }),
     });
-    bidId = clawdRes.lead.id;
+    bidId = clawdRes.bid_id;
   } catch (err) {
     console.error("Clawd lead creation failed:", err);
     return NextResponse.json(

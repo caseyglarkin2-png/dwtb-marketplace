@@ -147,20 +147,38 @@ export async function getPipeline(): Promise<PipelineResponse> {
   return clawdFetch<PipelineResponse>("/api/dwtb-pipeline");
 }
 
-// ── Bid Persistence ─────────────────────────────────────
-// Bids are stored on Clawd as enriched leads with bid-specific metadata.
-// Status transitions: submitted → accepted → paid → onboarded
-//                                → declined
-//                                → waitlisted → accepted (if slot opens)
+// ── Marketplace Bids ────────────────────────────────────
+// Bids use Clawd's dedicated /api/marketplace/bid endpoints.
+// Status transitions: pending → accepted → paid → onboarded
+//                              → declined
+//                              → waitlisted → accepted (if slot opens)
 
 export type BidStatus =
+  | "pending"
   | "submitted"
   | "accepted"
   | "paid"
   | "onboarded"
   | "declined"
   | "waitlisted"
+  | "withdrawn"
   | "expired";
+
+export interface ClawdBid {
+  bid_id: string;
+  company: string;
+  name: string;
+  email: string;
+  title: string;
+  bid_amount: number;
+  message: string;
+  status: BidStatus;
+  status_note?: string;
+  agreement_accepted: boolean;
+  consent_hash: string;
+  submitted_at: string;
+  updated_at: string;
+}
 
 export interface BidRecord {
   bid_id: string;
@@ -181,53 +199,85 @@ export interface BidRecord {
   user_agent?: string;
 }
 
-export async function updateLeadMeta(
-  leadId: string,
-  meta: Record<string, unknown>
-): Promise<ClawdLead> {
-  return clawdFetch<ClawdLead>(`/api/intake/leads/${encodeURIComponent(leadId)}`, {
-    method: "PATCH",
-    body: JSON.stringify({ meta }),
+export interface CreateBidRequest {
+  company: string;
+  name: string;
+  email: string;
+  title: string;
+  bid_amount: number;
+  message?: string;
+  agreement_accepted: boolean;
+  consent_hash: string;
+}
+
+export async function createBid(data: CreateBidRequest): Promise<ClawdBid> {
+  return clawdFetch<ClawdBid>("/api/marketplace/bid", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 
-export async function updateLeadStatus(
-  leadId: string,
-  status: string,
-  notes?: string
-): Promise<ClawdLead> {
-  const body: Record<string, unknown> = { status };
-  if (notes) body.notes = notes;
-  return clawdFetch<ClawdLead>(`/api/intake/leads/${encodeURIComponent(leadId)}`, {
+export async function getBids(): Promise<{ total: number; bids: ClawdBid[] }> {
+  return clawdFetch<{ total: number; bids: ClawdBid[] }>("/api/marketplace/bids");
+}
+
+export async function getBid(bidId: string): Promise<ClawdBid> {
+  // Use status endpoint which returns bid detail
+  return clawdFetch<ClawdBid>(`/api/marketplace/bid/${encodeURIComponent(bidId)}/status`);
+}
+
+export async function updateBid(
+  bidId: string,
+  update: { status?: string; status_note?: string }
+): Promise<ClawdBid> {
+  return clawdFetch<ClawdBid>(`/api/marketplace/bid/${encodeURIComponent(bidId)}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body: JSON.stringify(update),
   });
 }
 
-export async function getLeadById(
-  leadId: string
-): Promise<ClawdLead> {
-  return clawdFetch<ClawdLead>(`/api/intake/leads/${encodeURIComponent(leadId)}`);
-}
-
-export function extractBidRecord(lead: ClawdLead): BidRecord {
-  const meta = (lead.meta || {}) as Record<string, unknown>;
+// Convert ClawdBid to BidRecord for backward compatibility
+export function toBidRecord(bid: ClawdBid, extra?: Record<string, unknown>): BidRecord {
   return {
-    bid_id: lead.id,
-    bidder_name: lead.name,
-    bidder_email: lead.email,
-    bidder_company: lead.company,
-    bidder_title: (meta.bidder_title as string) || "",
-    bid_amount: (meta.bid_amount as number) || 0,
-    status: (meta.bid_status as BidStatus) || "submitted",
-    contract_version: (meta.contract_version as string) || "",
-    signature_hash: (meta.signature_hash as string) || "",
-    signed_at: (meta.signed_at as string) || lead.created_at,
-    note: lead.notes || undefined,
-    submitted_at: lead.created_at,
-    accepted_at: meta.accepted_at as string | undefined,
-    paid_at: meta.paid_at as string | undefined,
-    ip_address: meta.ip_address as string | undefined,
-    user_agent: meta.user_agent as string | undefined,
+    bid_id: bid.bid_id,
+    bidder_name: bid.name,
+    bidder_email: bid.email,
+    bidder_company: bid.company,
+    bidder_title: bid.title,
+    bid_amount: bid.bid_amount,
+    status: bid.status,
+    contract_version: (extra?.contract_version as string) || "",
+    signature_hash: bid.consent_hash,
+    signed_at: bid.submitted_at,
+    note: bid.message || bid.status_note || undefined,
+    submitted_at: bid.submitted_at,
+    accepted_at: extra?.accepted_at as string | undefined,
+    paid_at: extra?.paid_at as string | undefined,
+    ip_address: extra?.ip_address as string | undefined,
+    user_agent: extra?.user_agent as string | undefined,
   };
+}
+
+// ── Slots ───────────────────────────────────────────────
+
+export interface SlotInfo {
+  id: string;
+  status: string;
+}
+
+export interface SlotsStatus {
+  slots: SlotInfo[];
+  available: number;
+  held: number;
+  committed: number;
+  sold: number;
+  total: number;
+  access_mode: string;
+  quarter: string;
+  price_monthly: number;
+  engagement_months: number;
+}
+
+export async function getSlots(): Promise<SlotsStatus> {
+  return clawdFetch<SlotsStatus>("/api/slots/status");
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
 import { appendAuditEntry } from "@/lib/audit";
-import { getLeadById, extractBidRecord } from "@/lib/clawd";
+import { getBid, toBidRecord } from "@/lib/clawd";
 
 // POST /api/admin/bids/[id]/notify — resend notification for a specific bid
 export async function POST(
@@ -17,8 +17,8 @@ export async function POST(
 
   let bid;
   try {
-    const lead = await getLeadById(bidId);
-    bid = extractBidRecord(lead);
+    const clawdBid = await getBid(bidId);
+    bid = toBidRecord(clawdBid);
   } catch {
     return NextResponse.json({ error: "Bid not found" }, { status: 404 });
   }

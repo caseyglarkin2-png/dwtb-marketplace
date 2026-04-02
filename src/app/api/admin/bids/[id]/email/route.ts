@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
-import { getLeadById, extractBidRecord } from "@/lib/clawd";
+import { getBid, toBidRecord } from "@/lib/clawd";
 import { appendAuditEntry } from "@/lib/audit";
 
 // POST /api/admin/bids/[id]/email — send custom email to bidder
@@ -34,14 +34,13 @@ export async function POST(
     return NextResponse.json({ error: "Body too long (max 5000 chars)" }, { status: 400 });
   }
 
-  let lead;
+  let bid;
   try {
-    lead = await getLeadById(bidId);
+    const clawdBid = await getBid(bidId);
+    bid = toBidRecord(clawdBid);
   } catch {
     return NextResponse.json({ error: "Bid not found" }, { status: 404 });
   }
-
-  const bid = extractBidRecord(lead);
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
     return NextResponse.json({ error: "Email service not configured" }, { status: 503 });

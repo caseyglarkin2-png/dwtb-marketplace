@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getLeadById, extractBidRecord } from "@/lib/clawd";
+import { getBid, toBidRecord } from "@/lib/clawd";
 import { renderContractText } from "@/lib/contract-text";
 import { generateContractPdf } from "@/lib/pdf";
 
@@ -19,17 +19,17 @@ export async function GET(
   }
 
   try {
-    const lead = await getLeadById(id);
+    const clawdBid = await getBid(id);
 
     // Verify email matches (prevent unauthorized downloads)
-    if (lead.email.toLowerCase() !== email.toLowerCase()) {
+    if (clawdBid.email.toLowerCase() !== email.toLowerCase()) {
       return NextResponse.json(
         { error: "Not found" },
         { status: 404 }
       );
     }
 
-    const bid = extractBidRecord(lead);
+    const bid = toBidRecord(clawdBid);
 
     const contractText = renderContractText({
       bidderName: bid.bidder_name,
