@@ -50,10 +50,10 @@ export default function ContractPreview({ params }: ContractPreviewProps) {
       <div className="flex items-center justify-between">
         <div>
           <h4 className="text-sm font-mono text-white/50 uppercase tracking-wider">
-            Q2 2026 Partnership Agreement
+            Partnership Agreement
           </h4>
           <p className="text-xs text-white/30 font-mono mt-0.5">
-            Version {CONTRACT_VERSION} · 10 sections
+            Version {CONTRACT_VERSION} · {sections.length} sections
           </p>
         </div>
         <div className="flex gap-2">

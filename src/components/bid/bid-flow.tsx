@@ -10,6 +10,7 @@ interface BidFlowProps {
   minBid: number;
   minIncrement: number;
   remainingSlots: number;
+  totalSlots: number;
   deadline: string;
 }
 
@@ -90,6 +91,7 @@ export default function BidFlow({
   minBid,
   minIncrement,
   remainingSlots,
+  totalSlots,
   deadline,
 }: BidFlowProps) {
   const [step, setStep] = useState(1);
@@ -198,7 +200,7 @@ export default function BidFlow({
             window.history.replaceState({}, "", "?step=confirmed");
             return;
           }
-          setSubmitError("This bid has already been submitted.");
+          setSubmitError("This request has already been submitted.");
         } else if (res.status === 429) {
           setSubmitError("Too many attempts. Please wait a moment and try again.");
         } else if (res.status === 403) {
@@ -283,14 +285,14 @@ export default function BidFlow({
               <div
                 className={`h-2.5 w-2.5 rounded-full transition-all ${
                   n === step
-                    ? "bg-[#00FFC2] ring-2 ring-[#00FFC2]/30"
+                    ? "bg-accent ring-2 ring-accent/30"
                     : n < step
-                    ? "bg-[#00FFC2]/50"
+                    ? "bg-accent/50"
                     : "bg-white/10"
                 }`}
               />
               <span className={`text-[10px] font-mono tracking-wider transition-colors ${
-                n === step ? "text-[#00FFC2]" : "text-white/25"
+                n === step ? "text-accent" : "text-white/25"
               }`}>
                 {label}
               </span>
@@ -319,8 +321,8 @@ export default function BidFlow({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-white/50">Allocations remaining</span>
-              <span className="text-[#00FFC2] font-mono font-semibold">
-                {remainingSlots} of 3
+              <span className="text-accent font-mono font-semibold">
+                {remainingSlots} of {totalSlots}
               </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -337,7 +339,7 @@ export default function BidFlow({
 
           <div className="rounded-lg border border-white/8 bg-white/[0.02] p-4">
             <p className="text-xs text-white/50 font-mono uppercase tracking-wider mb-2">
-              What&apos;s included
+              What's included
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
@@ -348,7 +350,7 @@ export default function BidFlow({
                 "Performance tracking & attribution",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-sm text-white/60">
-                  <span className="text-[#00FFC2] text-xs">✓</span>
+                  <span className="text-accent text-xs">✓</span>
                   {item}
                 </div>
               ))}
@@ -357,7 +359,7 @@ export default function BidFlow({
 
           <button
             onClick={() => setStep(2)}
-            className="w-full rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-all duration-300 hover:opacity-90 active:scale-[0.98] hover:shadow-[0_0_30px_rgba(0,255,194,0.2)]"
+            className="w-full rounded-lg bg-accent px-6 py-3 min-h-[48px] font-semibold text-black transition-all duration-300 hover:opacity-90 active:scale-[0.98] hover:shadow-[0_0_30px_rgba(0,255,194,0.2)]"
           >
             Request Allocation →
           </button>
@@ -387,7 +389,7 @@ export default function BidFlow({
                   onChange={(e) => updateBidder("name", e.target.value)}
                   aria-required="true"
                   autoComplete="name"
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   placeholder="Jane Smith"
                 />
               </div>
@@ -403,7 +405,7 @@ export default function BidFlow({
                   onChange={(e) => updateBidder("title", e.target.value)}
                   aria-required="true"
                   autoComplete="organization-title"
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   placeholder="VP of Marketing"
                 />
               </div>
@@ -421,7 +423,7 @@ export default function BidFlow({
                   onChange={(e) => updateBidder("company", e.target.value)}
                   aria-required="true"
                   autoComplete="organization"
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   placeholder="Acme Freight"
                 />
               </div>
@@ -437,7 +439,7 @@ export default function BidFlow({
                   onChange={(e) => updateBidder("email", e.target.value)}
                   aria-required="true"
                   autoComplete="email"
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   placeholder="you@company.com"
                 />
               </div>
@@ -461,7 +463,7 @@ export default function BidFlow({
                   min={minBid}
                   step={minIncrement}
                   aria-required="true"
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 pl-8 text-white text-lg font-mono placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 pl-8 text-white text-lg font-mono placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
               <p className="mt-1 text-xs text-white/30 font-mono">
@@ -484,7 +486,7 @@ export default function BidFlow({
                 onChange={(e) => updateBidder("note", e.target.value)}
                 rows={2}
                 maxLength={2000}
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2] resize-none"
+                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent resize-none"
                 placeholder="Context about your goals, timeline, or what you're looking for"
               />
             </div>
@@ -500,7 +502,7 @@ export default function BidFlow({
             <button
               onClick={() => setStep(3)}
               disabled={!step1Valid || !step2Valid}
-              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+              className="flex-1 rounded-lg bg-accent px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               Review Agreement →
             </button>
@@ -572,7 +574,7 @@ export default function BidFlow({
             <button
               onClick={() => setStep(4)}
               disabled={!signData}
-              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+              className="flex-1 rounded-lg bg-accent px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               Review + Submit →
             </button>
@@ -590,7 +592,7 @@ export default function BidFlow({
             </p>
           </div>
 
-          <div className="rounded-lg border border-[#00FFC2]/20 bg-[#00FFC2]/5 p-8 text-center space-y-2">
+          <div className="rounded-lg border border-accent/20 bg-accent/5 p-8 text-center space-y-2">
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
               Allocation request
             </p>
@@ -609,7 +611,7 @@ export default function BidFlow({
                 type="checkbox"
                 checked={highValueConfirmed}
                 onChange={(e) => setHighValueConfirmed(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00FFC2] focus:ring-[#00FFC2] focus:ring-offset-0"
+                className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-accent focus:ring-accent focus:ring-offset-0"
               />
               <span className="text-sm text-white/70">
                 I confirm this allocation request of {amountFormatted} is intentional.
@@ -683,7 +685,7 @@ export default function BidFlow({
               disabled={
                 submitting || (bidder.amount > 50000 && !highValueConfirmed)
               }
-              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+              className="flex-1 rounded-lg bg-accent px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               {submitting
                 ? "Submitting..."

@@ -67,9 +67,9 @@ function StatusTimeline({ status }: { status: string }) {
               <div
                 className={`w-9 h-9 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all ${
                   isCompleted
-                    ? "bg-[#00FFC2] text-black"
+                    ? "bg-accent text-black"
                     : isCurrent
-                      ? "border-2 border-[#00FFC2] text-[#00FFC2] shadow-[0_0_12px_rgba(0,255,194,0.3)]"
+                      ? "border-2 border-accent text-accent shadow-[0_0_12px_rgba(0,255,194,0.3)]"
                       : "border border-white/15 text-white/25"
                 }`}
               >
@@ -78,7 +78,7 @@ function StatusTimeline({ status }: { status: string }) {
               <span
                 className={`text-[10px] font-mono uppercase tracking-wider whitespace-nowrap ${
                   isCompleted
-                    ? "text-[#00FFC2]/70"
+                    ? "text-accent/70"
                     : isCurrent
                       ? "text-white"
                       : "text-white/25"
@@ -90,7 +90,7 @@ function StatusTimeline({ status }: { status: string }) {
             {i < TIMELINE_STEPS.length - 1 && (
               <div
                 className={`flex-1 h-px mx-2 ${
-                  isCompleted ? "bg-[#00FFC2]/50" : isFuture ? "bg-white/8" : "bg-white/15"
+                  isCompleted ? "bg-accent/50" : isFuture ? "bg-white/8" : "bg-white/15"
                 }`}
               />
             )}
@@ -129,11 +129,11 @@ function ConfirmationContent() {
   const showPaymentInfo = bidStatus && bidStatus.status === "accepted";
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
       <div className="max-w-xl w-full">
         {/* Header */}
         <div className="mb-8">
-          <p className="text-[#00FFC2] font-mono text-xs uppercase tracking-[0.2em] mb-2">
+          <p className="text-accent font-mono text-xs uppercase tracking-[0.2em] mb-2">
             Allocation Status
           </p>
           <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
@@ -148,8 +148,21 @@ function ConfirmationContent() {
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-red-400 text-sm">
-            {error}
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6 text-sm space-y-3">
+            <p className="text-red-400">{error}</p>
+            <p className="text-white/40">
+              Check the confirmation email you received for the correct link, or contact{" "}
+              <a href="mailto:casey@dwtb.dev" className="text-accent hover:underline">
+                casey@dwtb.dev
+              </a>{" "}
+              with your company name for assistance.
+            </p>
+            <a
+              href="/partners"
+              className="inline-block mt-2 text-accent text-sm font-mono hover:underline"
+            >
+              ← Back to offering
+            </a>
           </div>
         )}
 
@@ -162,8 +175,8 @@ function ConfirmationContent() {
 
             {/* Payment info — shown when accepted, awaiting payment */}
             {showPaymentInfo && (
-              <div className="rounded-lg border border-[#00FFC2]/20 bg-[#00FFC2]/[0.03] p-5 space-y-3">
-                <p className="text-[#00FFC2] font-mono text-xs uppercase tracking-wider">
+              <div className="rounded-lg border border-accent/20 bg-accent/[0.03] p-5 space-y-3">
+                <p className="text-accent font-mono text-xs uppercase tracking-wider">
                   Payment Instructions Sent
                 </p>
                 <p className="text-white/60 text-sm">
@@ -229,7 +242,7 @@ function ConfirmationContent() {
             {bidStatus.receipt_url && email && (
               <a
                 href={`${bidStatus.receipt_url}?email=${encodeURIComponent(email)}`}
-                className="block w-full rounded-lg bg-[#00FFC2] px-6 py-3 font-semibold text-black text-center transition-all hover:opacity-90 hover:shadow-[0_0_20px_rgba(0,255,194,0.2)]"
+                className="block w-full rounded-lg bg-accent px-6 py-3 font-semibold text-black text-center transition-all hover:opacity-90 hover:shadow-[0_0_20px_rgba(0,255,194,0.2)]"
               >
                 Download Signed Contract
               </a>
@@ -278,7 +291,7 @@ export default function ConfirmationPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="min-h-screen bg-surface flex items-center justify-center">
           <span className="text-white/40 font-mono animate-pulse">
             Loading...
           </span>

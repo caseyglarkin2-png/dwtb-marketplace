@@ -19,6 +19,9 @@ export function VideoStage() {
       .catch(() => {});
   }, [envUrl]);
 
+  // Don't render the section if there's no video URL configured
+  if (!videoUrl) return null;
+
   return (
     <section
       id="machine"
@@ -44,8 +47,7 @@ export function VideoStage() {
 
         {/* Video container */}
         <div className="relative w-full aspect-video bg-surface-raised rounded-lg border border-border overflow-hidden">
-          {videoUrl ? (
-            <iframe
+          <iframe
               src={videoUrl}
               className="absolute inset-0 w-full h-full"
               allow="autoplay; fullscreen; encrypted-media"
@@ -53,19 +55,6 @@ export function VideoStage() {
               loading="lazy"
               title="Casey Glarkin — The Freight Marketer"
             />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <div className="text-2xl md:text-3xl font-bold mb-2">
-                Casey Glarkin
-              </div>
-              <div className="text-text-secondary text-lg">
-                The Freight Marketer
-              </div>
-              <div className="mt-4 text-text-muted text-sm font-mono">
-                [Video dropping soon]
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </section>

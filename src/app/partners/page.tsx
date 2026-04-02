@@ -12,10 +12,57 @@ import { DeadlineSection } from "@/components/sections/deadline-section";
 import { ExpiredState } from "@/components/sections/expired-state";
 import { OperatorClose } from "@/components/sections/operator-close";
 import { track } from "@/lib/analytics";
+import {
+  FALLBACK_STATS,
+  DEFAULT_TOTAL_SLOTS,
+  DEFAULT_ACCEPTED_SLOTS,
+} from "@/lib/constants";
+
+export interface LiveData {
+  remainingSlots: number;
+  totalSlots: number;
+  stats: {
+    proposalsSent: number;
+    totalViews: number;
+    viewRate: number;
+    pipelineValue: number;
+    strikeNow: number;
+  };
+  loaded: boolean;
+}
 
 export default function PartnersPage() {
   const [bootComplete, setBootComplete] = useState(false);
   const expired = isExpired();
+  const [liveData, setLiveData] = useState<LiveData>({
+    remainingSlots: DEFAULT_TOTAL_SLOTS - DEFAULT_ACCEPTED_SLOTS,
+    totalSlots: DEFAULT_TOTAL_SLOTS,
+    stats: { ...FALLBACK_STATS },
+    loaded: false,
+  });
+
+  // Fetch live slots + stats once at page level, share with children
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/slots").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([slotData, statsData]) => {
+      setLiveData((prev) => ({
+        ...prev,
+        loaded: true,
+        remainingSlots:
+          slotData?.remaining_slots ?? prev.remainingSlots,
+        totalSlots: slotData?.total_slots ?? prev.totalSlots,
+        stats: {
+          proposalsSent: statsData?.proposalsSent ?? prev.stats.proposalsSent,
+          totalViews: statsData?.totalViews ?? prev.stats.totalViews,
+          viewRate: statsData?.viewRate ?? prev.stats.viewRate,
+          pipelineValue: statsData?.pipelineValue ?? prev.stats.pipelineValue,
+          strikeNow: statsData?.strikeNow ?? prev.stats.strikeNow,
+        },
+      }));
+    });
+  }, []);
 
   useEffect(() => {
     track("page_load", { expired });
@@ -27,6 +74,7 @@ export default function PartnersPage() {
         <BootSequence
           expired={expired}
           onComplete={() => setBootComplete(true)}
+          liveData={liveData}
         />
       )}
 
@@ -34,7 +82,7 @@ export default function PartnersPage() {
         <>
           <MarketTicker visible={bootComplete} />
           <main id="main-content" className="animate-[fadeIn_0.5s_ease-out] pt-10">
-          <Hero />
+          <Hero liveData={liveData} />
           <div className="w-16 h-px bg-accent/40 mx-auto" />
           <VideoStage />
           <div className="w-16 h-px bg-accent/40 mx-auto" />

@@ -3,9 +3,14 @@
 import { useCallback } from "react";
 import { DEADLINE } from "@/lib/deadline";
 import { track } from "@/lib/analytics";
-import { FALLBACK_STATS } from "@/lib/constants";
+import type { LiveData } from "@/app/partners/page";
 
-export function Hero() {
+interface HeroProps {
+  liveData: LiveData;
+}
+
+export function Hero({ liveData }: HeroProps) {
+  const { remainingSlots, totalSlots, stats } = liveData;
   const deadlineStr = DEADLINE.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -44,15 +49,15 @@ export function Hero() {
 
       {/* Headline */}
       <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight max-w-4xl tracking-tight">
-        2 of 3 Allocations Remaining.{" "}
+        {remainingSlots} of {totalSlots} Allocations Remaining.{" "}
         <span className="text-accent">Q2 2026 GTM Engine.</span>
       </h1>
 
       {/* Subline */}
       <p className="mt-6 text-lg md:text-xl text-text-secondary max-w-2xl leading-relaxed font-light tracking-wide">
         DWTB?! Studios is the signal-driven GTM engine for enterprise B2B
-        freight marketing. 3 partnership allocations per quarter. 1 is spoken for.
-        You are looking at the last 2.
+        freight marketing. {totalSlots} partnership allocations per quarter. {totalSlots - remainingSlots} {totalSlots - remainingSlots === 1 ? "is" : "are"} spoken for.
+        You are looking at the last {remainingSlots}.
       </p>
 
       {/* CTA */}
@@ -66,7 +71,7 @@ export function Hero() {
 
       {/* Social proof micro-copy */}
       <p className="mt-3 text-xs text-text-muted font-mono">
-        {FALLBACK_STATS.strikeNow} accounts currently in the pipeline
+        {stats.strikeNow} accounts currently in the pipeline
       </p>
 
       {/* Secondary CTA — warm path */}

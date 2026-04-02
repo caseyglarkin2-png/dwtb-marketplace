@@ -18,8 +18,10 @@ export function BidSection() {
   const [remainingSlots, setRemainingSlots] = useState(
     DEFAULT_TOTAL_SLOTS - DEFAULT_ACCEPTED_SLOTS
   );
+  const [totalSlots, setTotalSlots] = useState(DEFAULT_TOTAL_SLOTS);
   const [deadline, setDeadline] = useState(DEADLINE_UTC);
   const [manuallyClosed, setManuallyClosed] = useState(false);
+  const [slotsLoaded, setSlotsLoaded] = useState(false);
 
   useEffect(() => {
     fetch("/api/slots")
@@ -32,6 +34,8 @@ export function BidSection() {
             setMinIncrement(data.min_increment);
           if (typeof data.remaining_slots === "number")
             setRemainingSlots(data.remaining_slots);
+          if (typeof data.total_slots === "number")
+            setTotalSlots(data.total_slots);
           if (data.deadline) setDeadline(data.deadline);
           if (typeof data.manually_closed === "boolean")
             setManuallyClosed(data.manually_closed);
@@ -39,7 +43,8 @@ export function BidSection() {
       })
       .catch(() => {
         // Keep defaults
-      });
+      })
+      .finally(() => setSlotsLoaded(true));
   }, []);
 
   if (manuallyClosed) {
@@ -68,12 +73,20 @@ export function BidSection() {
           4 steps. ~3 minutes. Plain-language agreement. No lawyers needed.
         </p>
 
-        <BidFlow
-          minBid={minBid}
-          minIncrement={minIncrement}
-          remainingSlots={remainingSlots}
-          deadline={deadline}
-        />
+        {!slotsLoaded ? (
+          <div className="text-center py-12">
+            <div className="inline-block w-6 h-6 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+            <p className="mt-3 text-text-muted text-sm font-mono">Loading offering details...</p>
+          </div>
+        ) : (
+          <BidFlow
+            minBid={minBid}
+            minIncrement={minIncrement}
+            remainingSlots={remainingSlots}
+            totalSlots={totalSlots}
+            deadline={deadline}
+          />
+        )}
       </div>
     </section>
   );

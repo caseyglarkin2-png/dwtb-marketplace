@@ -61,7 +61,7 @@ export default function ConsentCapture({
             <div
               key={i}
               className={`h-1 w-6 rounded-full transition-all ${
-                i < completedCount ? "bg-[#00FFC2]" : "bg-white/10"
+                i < completedCount ? "bg-accent" : "bg-white/10"
               }`}
             />
           ))}
@@ -81,10 +81,10 @@ export default function ConsentCapture({
               setConsent1(e.target.checked);
               notifyParent({ c1: e.target.checked });
             }}
-            className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00FFC2] focus:ring-[#00FFC2] focus:ring-offset-0"
+            className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 text-accent focus:ring-accent focus:ring-offset-0"
           />
           <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
-            I&apos;ve reviewed the agreement and understand this becomes binding if accepted.
+            I've reviewed the agreement and understand this becomes binding if accepted.
           </span>
         </label>
 
@@ -96,7 +96,7 @@ export default function ConsentCapture({
               setConsent2(e.target.checked);
               notifyParent({ c2: e.target.checked });
             }}
-            className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00FFC2] focus:ring-[#00FFC2] focus:ring-offset-0"
+            className="mt-0.5 h-4 w-4 rounded border-white/20 bg-white/5 text-accent focus:ring-accent focus:ring-offset-0"
           />
           <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
             I consent to e-sign per the ESIGN Act.{" "}
@@ -122,8 +122,8 @@ export default function ConsentCapture({
           placeholder={bidderName}
           className={`w-full rounded-lg border bg-white/5 px-4 py-3 text-white placeholder:text-white/15 focus:outline-none focus:ring-1 transition-colors ${
             nameMatch && typedName.length > 0
-              ? "border-[#00FFC2]/40 focus:border-[#00FFC2] focus:ring-[#00FFC2]"
-              : "border-white/20 focus:border-[#00FFC2] focus:ring-[#00FFC2]"
+              ? "border-accent/40 focus:border-accent focus:ring-accent"
+              : "border-white/20 focus:border-accent focus:ring-accent"
           }`}
         />
         {typedName.length > 0 && !nameMatch && (
@@ -132,23 +132,28 @@ export default function ConsentCapture({
           </p>
         )}
         {nameMatch && typedName.length > 0 && (
-          <p className="mt-1 text-xs text-[#00FFC2]/60">
+          <p className="mt-1 text-xs text-accent/60">
             ✓ Name confirmed
           </p>
         )}
       </div>
 
       {/* Signature pad */}
-      <SignaturePad
-        onChange={(data) => {
-          setSignatureData(data);
-          notifyParent({ sig: data });
-        }}
-      />
+      <div>
+        <label className="block text-sm text-white/50 font-mono uppercase tracking-wider mb-1.5">
+          Draw your signature
+        </label>
+        <SignaturePad
+          onChange={(data) => {
+            setSignatureData(data);
+            notifyParent({ sig: data });
+          }}
+        />
+      </div>
 
       {/* Completion indicator */}
       {allValid && (
-        <p className="text-xs text-[#00FFC2]/70 font-mono text-center">
+        <p className="text-xs text-accent/70 font-mono text-center">
           ✓ Ready to proceed
         </p>
       )}

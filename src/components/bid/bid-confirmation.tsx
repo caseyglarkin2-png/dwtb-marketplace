@@ -29,9 +29,9 @@ export default function BidConfirmation({
   return (
     <div className="text-center space-y-8">
       {/* Status badge */}
-      <div className="inline-flex items-center gap-2 rounded-full border border-[#00FFC2]/30 bg-[#00FFC2]/10 px-4 py-2">
-        <span className="h-2 w-2 rounded-full bg-[#00FFC2] animate-pulse" />
-        <span className="font-mono text-xs text-[#00FFC2] uppercase tracking-wider">
+      <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2">
+        <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+        <span className="font-mono text-xs text-accent uppercase tracking-wider">
           {isWaitlisted ? "Waitlisted" : "Request Submitted"}
         </span>
       </div>
@@ -40,8 +40,8 @@ export default function BidConfirmation({
       <div>
         <h2 className="text-3xl font-bold text-white mb-2">
           {isWaitlisted
-            ? "You&apos;re on the Waitlist"
-            : "You&apos;re In."}
+            ? "You're on the Waitlist"
+            : "You're In."}
         </h2>
         <p className="text-white/50 max-w-md mx-auto">
           {isWaitlisted
@@ -92,7 +92,7 @@ export default function BidConfirmation({
               { time: "April 1", text: "Q2 engagement begins" },
             ].map(({ time, text }) => (
               <div key={time} className="flex items-start gap-3">
-                <span className="flex-shrink-0 text-[10px] font-mono text-[#00FFC2]/60 uppercase w-16 pt-0.5">
+                <span className="flex-shrink-0 text-[10px] font-mono text-accent/60 uppercase w-16 pt-0.5">
                   {time}
                 </span>
                 <span className="text-sm text-white/50">{text}</span>
@@ -111,7 +111,7 @@ export default function BidConfirmation({
           href={`/api/bids/receipt/${bidId}?email=${encodeURIComponent(bidderEmail)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg border border-[#00FFC2]/30 bg-[#00FFC2]/10 px-6 py-3 min-h-[48px] font-semibold text-[#00FFC2] text-sm transition-opacity hover:opacity-80 active:scale-[0.98]"
+          className="inline-block rounded-lg border border-accent/30 bg-accent/10 px-6 py-3 min-h-[48px] font-semibold text-accent text-sm transition-opacity hover:opacity-80 active:scale-[0.98]"
         >
           Download Signed Agreement (PDF)
         </a>

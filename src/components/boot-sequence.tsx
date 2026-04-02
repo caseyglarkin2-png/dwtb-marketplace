@@ -1,48 +1,53 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { FALLBACK_STATS } from "@/lib/constants";
-
-const BOOT_LINES = [
-  { text: "DWTB?! STUDIOS // Q2 2026", delay: 0 },
-  { text: "OFFERING PERIOD OPEN", delay: 400 },
-  { text: "2 OF 3 ALLOCATIONS REMAINING", delay: 800 },
-  { text: "CONTRACT ENGINE INITIALIZED", delay: 1200 },
-  {
-    text: `[108 generated · ${FALLBACK_STATS.proposalsSent} shipped · $${(FALLBACK_STATS.pipelineValue / 1000).toFixed(0)}K pipeline · ${FALLBACK_STATS.strikeNow} in motion]`,
-    delay: 1600,
-  },
-  { text: "READY_", delay: 2200 },
-];
-
-const EXPIRED_BOOT_LINES = [
-  { text: "DWTB?! STUDIOS // Q2 2026", delay: 0 },
-  { text: "OFFERING CLOSED", delay: 400 },
-  { text: "Q2 AT CAPACITY", delay: 800 },
-  { text: "DWTB STUDIOS OPERATIONAL", delay: 1200 },
-  { text: "READY_", delay: 1600 },
-];
+import type { LiveData } from "@/app/partners/page";
 
 interface BootSequenceProps {
   expired?: boolean;
   onComplete: () => void;
+  liveData: LiveData;
 }
 
-export function BootSequence({ expired = false, onComplete }: BootSequenceProps) {
+export function BootSequence({ expired = false, onComplete, liveData }: BootSequenceProps) {
   const [visibleLines, setVisibleLines] = useState<number>(0);
   const [skipped, setSkipped] = useState(false);
 
-  const lines = expired ? EXPIRED_BOOT_LINES : BOOT_LINES;
+  const { remainingSlots, totalSlots, stats } = liveData;
+
+  const lines = useMemo(() => {
+    if (expired) {
+      return [
+        { text: "DWTB?! STUDIOS // Q2 2026", delay: 0 },
+        { text: "OFFERING CLOSED", delay: 400 },
+        { text: "Q2 AT CAPACITY", delay: 800 },
+        { text: "DWTB STUDIOS OPERATIONAL", delay: 1200 },
+        { text: "READY_", delay: 1600 },
+      ];
+    }
+    return [
+      { text: "DWTB?! STUDIOS // Q2 2026", delay: 0 },
+      { text: "OFFERING PERIOD OPEN", delay: 400 },
+      { text: `${remainingSlots} OF ${totalSlots} ALLOCATIONS REMAINING`, delay: 800 },
+      { text: "CONTRACT ENGINE INITIALIZED", delay: 1200 },
+      {
+        text: `[${stats.proposalsSent} shipped · $${(stats.pipelineValue / 1000).toFixed(0)}K pipeline · ${stats.strikeNow} in motion]`,
+        delay: 1600,
+      },
+      { text: "READY_", delay: 2200 },
+    ];
+  }, [expired, remainingSlots, totalSlots, stats]);
 
   const skip = useCallback(() => {
     setSkipped(true);
-    sessionStorage.setItem("dwtb_boot_seen", "1");
+    localStorage.setItem("dwtb_boot_seen", "1");
     onComplete();
   }, [onComplete]);
 
   useEffect(() => {
-    // Skip if already seen this session
-    if (sessionStorage.getItem("dwtb_boot_seen")) {
+    // Skip if already seen
+    if (localStorage.getItem("dwtb_boot_seen")) {
       skip();
       return;
     }
@@ -52,7 +57,7 @@ export function BootSequence({ expired = false, onComplete }: BootSequenceProps)
         setVisibleLines(i + 1);
         if (i === lines.length - 1) {
           setTimeout(() => {
-            sessionStorage.setItem("dwtb_boot_seen", "1");
+            localStorage.setItem("dwtb_boot_seen", "1");
             onComplete();
           }, 600);
         }
