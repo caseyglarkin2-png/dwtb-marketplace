@@ -51,7 +51,7 @@ export default function BidConfirmation({
       </div>
 
       {/* Receipt card */}
-      <div className="rounded-lg border border-white/10 bg-white/5 p-6 max-w-sm mx-auto text-left space-y-3">
+      <div className="rounded-lg border border-accent/20 bg-gradient-to-b from-accent/5 to-transparent p-6 max-w-sm mx-auto text-left space-y-3">
         <div className="flex justify-between">
           <span className="text-sm text-white/40 font-mono">Amount</span>
           <span className="text-sm text-white font-mono">{amountFormatted}</span>
@@ -105,6 +105,14 @@ export default function BidConfirmation({
       <p className="text-xs text-white/25 font-mono">
         Confirmation sent to your email · Reference ID: {bidId.slice(0, 8)}
       </p>
+
+      {/* Status portal link */}
+      <a
+        href="/status"
+        className="inline-block text-sm text-accent/60 font-mono hover:text-accent transition-colors"
+      >
+        Track your request status →
+      </a>
 
       {bidderEmail && (
         <a

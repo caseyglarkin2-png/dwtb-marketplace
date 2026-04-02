@@ -112,6 +112,7 @@ export default function MissionControl() {
     bid: Bid;
     status: string;
   } | null>(null);
+  const [sendEmailOnStatusChange, setSendEmailOnStatusChange] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -880,7 +881,44 @@ export default function MissionControl() {
                     {selectedBid.bid_id.slice(0, 12)}...
                   </button>
                 </div>
+                {selectedBid.consent_hash && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white/40">Sig Hash</span>
+                    <button
+                      onClick={() => copyToClipboard(selectedBid.consent_hash)}
+                      className="text-white/40 hover:text-[#00FFC2] text-xs font-mono transition-colors"
+                      title="Click to copy signature hash"
+                    >
+                      {selectedBid.consent_hash.slice(0, 12)}...
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Status transitions */}
+              {(VALID_TRANSITIONS[selectedBid.status] || []).length > 0 && (
+                <div>
+                  <div className="text-xs text-white/30 font-mono mb-2">STATUS TRANSITION</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {(VALID_TRANSITIONS[selectedBid.status] || []).map((action) => (
+                      <button
+                        key={action}
+                        onClick={() => setConfirmAction({ bid: selectedBid, status: action })}
+                        disabled={!!updating}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-colors disabled:opacity-30 ${
+                          action === "accepted" || action === "paid" || action === "onboarded"
+                            ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                            : action === "declined"
+                              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                              : "bg-white/10 text-white/50 hover:bg-white/20"
+                        }`}
+                      >
+                        → {STATUS_LABELS[action] || action}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Message / Notes */}
               {(selectedBid.message || selectedBid.status_note) && (
@@ -1016,7 +1054,7 @@ export default function MissionControl() {
               {confirmAction.bid.name} · $
               {Number(confirmAction.bid.bid_amount).toLocaleString()}
             </p>
-            <p className="text-sm text-white/40 mb-6">
+            <p className="text-sm text-white/40 mb-4">
               {confirmAction.status === "accepted" && slotsRemaining <= 0
                 ? `⚠ ALL SLOTS ARE FULL. Accepting will over-allocate. This will email ${confirmAction.bid.email} the signed contract PDF and payment instructions.`
                 : confirmAction.status === "accepted"
@@ -1029,6 +1067,18 @@ export default function MissionControl() {
                       ? "This marks the partner as onboarded."
                       : `This will email ${confirmAction.bid.email} a waitlist notification.`}
             </p>
+            {/* Email notification toggle */}
+            {["accepted", "declined", "waitlisted"].includes(confirmAction.status) && (
+              <label className="flex items-center gap-2 text-sm text-white/50 mb-6 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={sendEmailOnStatusChange}
+                  onChange={(e) => setSendEmailOnStatusChange(e.target.checked)}
+                  className="accent-[#00FFC2]"
+                />
+                Send email notification to {confirmAction.bid.email}
+              </label>
+            )}
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setConfirmAction(null)}

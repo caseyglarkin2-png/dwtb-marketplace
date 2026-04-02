@@ -275,9 +275,13 @@ export interface ClawdBid {
   message: string;
   status: BidStatus;
   status_note?: string;
+  tier?: string;
   agreement_accepted: boolean;
   consent_hash: string;
+  signature_hash?: string;
+  contract_version?: string;
   submitted_at: string;
+  created_at?: string;
   updated_at: string;
 }
 

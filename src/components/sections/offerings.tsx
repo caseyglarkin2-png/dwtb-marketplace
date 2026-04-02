@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { TIERS, TIER_ORDER, type TierId } from "@/lib/constants";
 import { useInView } from "@/lib/hooks/use-in-view";
+import { TierRequestModal } from "@/components/offerings/tier-request";
 
 const TIER_BADGES: Record<TierId, string | null> = {
   founding: null,
@@ -9,7 +11,15 @@ const TIER_BADGES: Record<TierId, string | null> = {
   enterprise: "FEATURED",
 };
 
-function TierCard({ tierId, index }: { tierId: TierId; index: number }) {
+function TierCard({
+  tierId,
+  index,
+  onRequest,
+}: {
+  tierId: TierId;
+  index: number;
+  onRequest: (tier: TierId) => void;
+}) {
   const tier = TIERS[tierId];
   const badge = TIER_BADGES[tierId];
   const isFeatured = tierId === "enterprise";
@@ -61,13 +71,9 @@ function TierCard({ tierId, index }: { tierId: TierId; index: number }) {
         ))}
       </ul>
 
-      <a
-        href="#bid"
-        onClick={() => {
-          try {
-            localStorage.setItem("dwtb_bid_tier", tierId);
-          } catch { /* storage unavailable */ }
-        }}
+      <button
+        type="button"
+        onClick={() => onRequest(tierId)}
         className={`block w-full text-center py-3 px-6 rounded-lg font-semibold text-sm transition-all duration-300 active:scale-[0.98] min-h-[48px] flex items-center justify-center ${
           isFeatured
             ? "bg-accent text-surface hover:bg-accent/90 hover:shadow-[0_0_30px_rgba(0,255,194,0.2)]"
@@ -75,13 +81,14 @@ function TierCard({ tierId, index }: { tierId: TierId; index: number }) {
         }`}
       >
         {isFeatured ? "Request Allocation" : "Select Tier"}
-      </a>
+      </button>
     </div>
   );
 }
 
 export function Offerings() {
   const { ref, isInView } = useInView();
+  const [requestTier, setRequestTier] = useState<TierId | null>(null);
 
   return (
     <section
@@ -104,10 +111,14 @@ export function Offerings() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           {TIER_ORDER.map((tierId, i) => (
-            <TierCard key={tierId} tierId={tierId} index={i} />
+            <TierCard key={tierId} tierId={tierId} index={i} onRequest={setRequestTier} />
           ))}
         </div>
       </div>
+
+      {requestTier && (
+        <TierRequestModal tier={requestTier} onClose={() => setRequestTier(null)} />
+      )}
     </section>
   );
 }

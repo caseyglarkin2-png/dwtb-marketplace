@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import ContractPreview from "./contract-preview";
 import ConsentCapture from "./consent-capture";
 import BidConfirmation from "./bid-confirmation";
@@ -93,6 +93,7 @@ export default function BidFlow({
   deadline,
 }: BidFlowProps) {
   const [step, setStep] = useState(1);
+  const prevStepRef = useRef(step);
   const [selectedTier, setSelectedTier] = useState<TierId | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -153,6 +154,11 @@ export default function BidFlow({
       return () => window.removeEventListener("beforeunload", handler);
     }
   }, [step]);
+
+  // Track previous step for slide direction
+  useEffect(() => {
+    prevStepRef.current = step;
+  });
 
   const updateBidder = useCallback(
     (field: keyof BidderInfo, value: string | number) => {
@@ -321,6 +327,18 @@ export default function BidFlow({
           </div>
         ))}
       </nav>
+
+      {/* Step content — slides in based on navigation direction */}
+      <div
+        key={step}
+        className={
+          step > prevStepRef.current
+            ? "animate-[slide-in-fwd_0.3s_ease-out]"
+            : step < prevStepRef.current
+            ? "animate-[slide-in-bwd_0.3s_ease-out]"
+            : ""
+        }
+      >
 
       {/* Step 1: Choose Tier */}
       {step === 1 && (
@@ -761,6 +779,8 @@ export default function BidFlow({
           </div>
         </div>
       )}
+
+      </div>{/* end animated step wrapper */}
     </div>
     </>
   );

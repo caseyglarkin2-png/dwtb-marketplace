@@ -90,8 +90,8 @@ export default function ContractPreview({ params }: ContractPreviewProps) {
                 onClick={() => toggle(section.id)}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left group"
               >
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white/8 flex items-center justify-center">
-                  <span className="text-xs font-mono text-white/50">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
+                  <span className="text-xs font-mono text-accent font-bold">
                     {section.number}
                   </span>
                 </span>
@@ -125,10 +125,16 @@ export default function ContractPreview({ params }: ContractPreviewProps) {
         })}
       </div>
 
-      {/* Read-time estimate */}
-      <p className="text-xs text-white/25 font-mono text-center pt-1">
-        ~2 min read · Plain language · No surprises
-      </p>
+      {/* Scroll to sign indicator */}
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <span className="text-xs text-white/25 font-mono">~2 min read · Plain language · No surprises</span>
+      </div>
+      <div className="flex items-center justify-center gap-2 animate-bounce mt-1">
+        <svg className="w-3 h-3 text-accent/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+        <span className="text-[10px] text-accent/40 font-mono uppercase tracking-wider">Scroll to sign</span>
+      </div>
     </div>
   );
 }

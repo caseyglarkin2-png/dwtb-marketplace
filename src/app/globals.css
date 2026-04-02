@@ -52,6 +52,16 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes slide-in-fwd {
+  from { opacity: 0; transform: translateX(32px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-bwd {
+  from { opacity: 0; transform: translateX(-32px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 /* Film grain noise overlay — instant premium */
 body::after {
   content: '';

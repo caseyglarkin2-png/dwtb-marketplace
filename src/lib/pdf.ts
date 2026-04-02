@@ -99,7 +99,10 @@ export function generatePaymentInstructionsPdf(
     `Reference: ${params.bidId}`,
   ].join("\n");
 
-  return buildSimplePdf(text);
+  return buildSimplePdf(text, {
+    header: "DWTB?! Studios LLC — Payment Instructions",
+    showPageNumbers: true,
+  });
 }
 
 // ── Contract PDF ────────────────────────────────────────
@@ -127,6 +130,16 @@ export function generateContractPdf(params: PdfParams): Uint8Array {
     contractVersion,
   } = params;
 
+  const generatedAt = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  const letterhead = [
+    "DWTB?! STUDIOS LLC",
+    "Offering Memorandum — Q2 2026 Partnership Agreement",
+    "CONFIDENTIAL — FOR ADDRESSEE ONLY",
+    "────────────────────────────────────────────",
+    "",
+  ].join("\n");
+
   const sigBlock = [
     "",
     "────────────────────────────────────────────",
@@ -141,14 +154,25 @@ export function generateContractPdf(params: PdfParams): Uint8Array {
     "",
     "This document was electronically signed in accordance with the",
     "Electronic Signatures in Global and National Commerce Act (ESIGN Act).",
+    "",
+    `Generated: ${generatedAt} ET`,
   ].join("\n");
 
-  return buildSimplePdf(contractText + sigBlock);
+  return buildSimplePdf(letterhead + contractText + sigBlock, {
+    header: "DWTB?! Studios LLC — CONFIDENTIAL",
+    showPageNumbers: true,
+  });
 }
 
 // ── Shared PDF Builder ──────────────────────────────────
 
-function buildSimplePdf(text: string): Uint8Array {
+interface BuildOptions {
+  header?: string;
+  showPageNumbers?: boolean;
+}
+
+function buildSimplePdf(text: string, opts: BuildOptions = {}): Uint8Array {
+  const { header: pageHeader, showPageNumbers } = opts;
 
   const fontSize = 10;
   const lineHeight = 14;
@@ -191,15 +215,14 @@ function buildSimplePdf(text: string): Uint8Array {
     return objNum;
   }
 
-  const header = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
-  currentOffset = new TextEncoder().encode(header).length;
+  const pdfHeader = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  currentOffset = new TextEncoder().encode(pdfHeader).length;
 
   // Object 1: Catalog
   const catalogObj = addObj("<< /Type /Catalog /Pages 2 0 R >>");
 
   // Object 2: Pages (placeholder — we'll fix refs)
   const pagesObjNum = objects.length + 1;
-  // Skip for now, add after page objects
   objects.push(""); // placeholder
   offsets.push(currentOffset);
   currentOffset += 0; // will be recalculated
@@ -213,17 +236,39 @@ function buildSimplePdf(text: string): Uint8Array {
   const pageObjNums: number[] = [];
   const streamObjNums: number[] = [];
 
-  for (const pageLines of pages) {
+  for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+    const pageLines = pages[pageIdx];
+    const pageNum = pageIdx + 1;
+
     // Build content stream
     let stream = `BT\n/F1 ${fontSize} Tf\n`;
     let y = marginTop;
 
+    // Page header line
+    if (pageHeader) {
+      stream += `${marginLeft} 775 Td\n(${escapeText(pageHeader)}) Tj\n`;
+      stream += `${-marginLeft} ${-775} Td\n`;
+    }
+
+    // Page content
     for (const line of pageLines) {
       stream += `${marginLeft} ${y} Td\n(${escapeText(line)}) Tj\n`;
-      // Reset position for next line
       stream += `${-marginLeft} ${-y} Td\n`;
       y -= lineHeight;
     }
+
+    // Page footer: confidential + page number
+    const confidentialText = "CONFIDENTIAL — FOR ADDRESSEE ONLY";
+    stream += `${marginLeft} 30 Td\n(${escapeText(confidentialText)}) Tj\n`;
+    stream += `${-marginLeft} ${-30} Td\n`;
+
+    if (showPageNumbers) {
+      const pageText = `Page ${pageNum} of ${pages.length}`;
+      const approxX = pageWidth - marginLeft - pageText.length * 6;
+      stream += `${approxX} 30 Td\n(${escapeText(pageText)}) Tj\n`;
+      stream += `${-approxX} ${-30} Td\n`;
+    }
+
     stream += "ET\n";
 
     const streamBytes = new TextEncoder().encode(stream);
@@ -245,7 +290,7 @@ function buildSimplePdf(text: string): Uint8Array {
   objects[pagesObjNum - 1] = pagesObj;
 
   // Recalculate all offsets
-  let runningOffset = new TextEncoder().encode(header).length;
+  let runningOffset = new TextEncoder().encode(pdfHeader).length;
   for (let i = 0; i < objects.length; i++) {
     offsets[i] = runningOffset;
     runningOffset += new TextEncoder().encode(objects[i]).length;
@@ -262,6 +307,6 @@ function buildSimplePdf(text: string): Uint8Array {
   const trailer = `trailer\n<< /Size ${objects.length + 1} /Root ${catalogObj} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
 
   // Combine
-  const fullPdf = header + objects.join("") + xref + trailer;
+  const fullPdf = pdfHeader + objects.join("") + xref + trailer;
   return new TextEncoder().encode(fullPdf);
 }

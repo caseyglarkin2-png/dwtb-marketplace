@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { AnimatedCounter } from "@/components/animated-counter";
-import { FALLBACK_STATS } from "@/lib/constants";
 import { useInView } from "@/lib/hooks/use-in-view";
 
 const TIMELINE = [
@@ -22,9 +21,32 @@ interface StatsData {
   _source?: "live" | "cached" | "fallback";
 }
 
+// Corrected Q1 2026 metrics (truth table)
+const CORRECTED_METRICS = {
+  generated: 108,
+  shipped: 38,
+  uniqueOpens: 40,
+  totalOpens: 86,
+  clicks: 14,
+  activePipeline: 6,
+  pipelineValue: 635000,
+};
+
+const FUNNEL = [
+  { label: "Generated", value: CORRECTED_METRICS.generated },
+  { label: "Shipped", value: CORRECTED_METRICS.shipped },
+  { label: "Opened", value: CORRECTED_METRICS.uniqueOpens },
+  { label: "Clicked", value: CORRECTED_METRICS.clicks },
+  { label: "Active", value: CORRECTED_METRICS.activePipeline },
+];
+
 export function Receipts() {
   const [stats, setStats] = useState<StatsData>({
-    ...FALLBACK_STATS,
+    proposalsSent: CORRECTED_METRICS.shipped,
+    totalViews: CORRECTED_METRICS.totalOpens,
+    viewRate: Math.round((CORRECTED_METRICS.totalOpens / CORRECTED_METRICS.shipped) * 100),
+    pipelineValue: CORRECTED_METRICS.pipelineValue,
+    strikeNow: CORRECTED_METRICS.activePipeline,
     asOf: null,
   });
   const { ref, isInView } = useInView();
@@ -49,49 +71,59 @@ export function Receipts() {
       className={`py-24 md:py-32 px-6 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
     >
       <div className="max-w-5xl mx-auto">
-        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-12 tracking-tight">Proof.</h2>
+        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 tracking-tight">Proof.</h2>
+        <p className="text-text-muted font-mono text-sm mb-12">Q1 2026 Operational Data</p>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-16">
+        {/* Row 1 — Volume stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <StatCard end={CORRECTED_METRICS.generated} label="Generated" index={0} animate={isInView} />
+          <StatCard end={CORRECTED_METRICS.shipped} label="Proposals Shipped" index={1} animate={isInView} />
+          <StatCard end={CORRECTED_METRICS.uniqueOpens} label="Unique Opens" index={2} animate={isInView} />
+          <StatCard end={CORRECTED_METRICS.totalOpens} label="Total Opens" index={3} animate={isInView} />
+        </div>
+
+        {/* Row 2 — Conversion stats */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
+          <StatCard end={CORRECTED_METRICS.clicks} label="Clicks" index={4} animate={isInView} />
+          <StatCard end={CORRECTED_METRICS.activePipeline} label="Active Pipeline" index={5} animate={isInView} />
           <StatCard
-            end={stats.proposalsSent}
-            label="Proposals Sent"
-            index={0}
-            animate={isInView}
-          />
-          <StatCard
-            end={stats.totalViews}
-            label="Total Views"
-            index={1}
-            animate={isInView}
-          />
-          <StatCard
-            end={stats.viewRate}
-            suffix="%"
-            label="View Rate"
-            index={2}
-            animate={isInView}
-          />
-          <StatCard
-            end={stats.pipelineValue}
+            end={CORRECTED_METRICS.pipelineValue}
             prefix="$"
-            label="Pipeline"
-            formatFn={(n) =>
-              n >= 1000 ? `${(n / 1000).toFixed(0)}K` : n.toString()
-            }
-            index={3}
+            label="Pipeline Value"
+            formatFn={(n) => n >= 1000 ? `${(n / 1000).toFixed(0)}K` : n.toString()}
+            index={6}
             animate={isInView}
-          />
-          <StatCard
-            end={stats.strikeNow}
-            label="Active Pipeline"
             className="col-span-2 md:col-span-1"
-            index={4}
-            animate={isInView}
           />
         </div>
 
-        {/* Compressed timeline — horizontal on desktop, vertical on mobile */}
+        {/* Funnel visualization */}
+        <div className="mb-16">
+          <div className="text-[11px] font-mono text-text-muted uppercase tracking-wider mb-4">Conversion Funnel</div>
+          <div className="flex items-end gap-2">
+            {FUNNEL.map((step, i) => {
+              const pct = (step.value / FUNNEL[0].value) * 100;
+              return (
+                <div key={step.label} className="flex-1 flex flex-col items-center gap-2">
+                  <span className="font-mono text-xs text-text-secondary">{step.value}</span>
+                  <div
+                    className="w-full rounded-t-sm bg-accent/60 transition-all duration-700"
+                    style={{
+                      height: `${Math.max(pct, 8)}%`,
+                      maxHeight: "64px",
+                      minHeight: "8px",
+                      transitionDelay: `${i * 100}ms`,
+                      opacity: isInView ? 1 : 0,
+                    }}
+                  />
+                  <span className="font-mono text-[10px] text-text-muted text-center leading-tight">{step.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Timeline */}
         <div className="hidden md:flex items-center justify-between gap-2 py-4">
           {TIMELINE.map((item, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -116,7 +148,6 @@ export function Receipts() {
           ))}
         </div>
 
-        {/* Stats freshness (F19) */}
         {stats.asOf && (
           <div className="mt-8 text-center">
             <span className="text-xs text-white/30 font-mono">
@@ -174,3 +205,5 @@ function StatCard({
     </div>
   );
 }
+
+

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
+import {
+  renderBidConfirmationEmail,
+  renderAdminNotificationEmail,
+} from "@/lib/email-templates";
 
 // POST /api/bids/notify — send bid confirmation emails (admin-only)
 // Accepts bid data directly in request body (no DB lookup)
@@ -26,6 +30,27 @@ export async function POST(request: NextRequest) {
 
     const adminEmail = process.env.ADMIN_EMAIL || "casey@dwtb.dev";
 
+    const adminEmail_ = renderAdminNotificationEmail({
+      bidderName: bid.bidder_name,
+      bidderTitle: bid.bidder_title,
+      bidderCompany: bid.bidder_company,
+      bidderEmail: bid.bidder_email,
+      bidAmount: Number(bid.bid_amount),
+      bidId: bid.bid_id || "N/A",
+      contractVersion: bid.contract_version || "Q2-2026-v2.0",
+      signedAt: bid.signed_at || new Date().toISOString(),
+      note: bid.note,
+    });
+
+    const bidderEmail_ = renderBidConfirmationEmail({
+      bidderName: bid.bidder_name,
+      bidderCompany: bid.bidder_company,
+      bidAmount: Number(bid.bid_amount),
+      bidId: bid.bid_id || "N/A",
+      contractVersion: bid.contract_version || "Q2-2026-v2.0",
+      signedAt: bid.signed_at || new Date().toISOString(),
+    });
+
     // Email to Casey
     try {
       await fetch("https://api.resend.com/emails", {
@@ -37,20 +62,8 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           from: "DWTB?! Studios <bids@dwtb.dev>",
           to: [adminEmail],
-          subject: `New Bid: $${Number(bid.bid_amount).toLocaleString()} from ${bid.bidder_company}`,
-          text: [
-            `New bid submitted for ${bid.contract_version || "Q2-2026"}`,
-            ``,
-            `Bidder: ${bid.bidder_name}`,
-            `Title: ${bid.bidder_title}`,
-            `Company: ${bid.bidder_company}`,
-            `Email: ${bid.bidder_email}`,
-            `Amount: $${Number(bid.bid_amount).toLocaleString()}`,
-            `Note: ${bid.note || "(none)"}`,
-            ``,
-            `Bid ID: ${bid.bid_id || "N/A"}`,
-            `Submitted: ${bid.signed_at || new Date().toISOString()}`,
-          ].join("\n"),
+          subject: adminEmail_.subject,
+          text: adminEmail_.text,
         }),
       });
     } catch (error) {
@@ -68,21 +81,9 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           from: "DWTB?! Studios <bids@dwtb.dev>",
           to: [bid.bidder_email],
-          subject: `Bid Confirmation — DWTB?! Studios Q2 2026`,
-          text: [
-            `${bid.bidder_name},`,
-            ``,
-            `Your bid has been received.`,
-            ``,
-            `Amount: $${Number(bid.bid_amount).toLocaleString()}`,
-            `Reference: ${bid.bid_id || "N/A"}`,
-            `Contract Version: ${bid.contract_version || "Q2-2026-v1.0"}`,
-            `Submitted: ${bid.signed_at || new Date().toISOString()}`,
-            ``,
-            `You will be notified when your bid status changes.`,
-            ``,
-            `— Casey Glarkin, DWTB?! Studios`,
-          ].join("\n"),
+          subject: bidderEmail_.subject,
+          html: bidderEmail_.html,
+          text: bidderEmail_.text,
         }),
       });
     } catch (error) {

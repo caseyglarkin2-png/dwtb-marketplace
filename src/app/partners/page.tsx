@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { isExpired } from "@/lib/deadline";
 import { BootSequence } from "@/components/boot-sequence";
 import { MarketTicker } from "@/components/market-ticker";
@@ -8,18 +9,39 @@ import { Hero } from "@/components/sections/hero";
 import { VideoStage } from "@/components/sections/video-stage";
 import { Receipts } from "@/components/sections/receipts";
 import { Offerings } from "@/components/sections/offerings";
-import { MarketSection } from "@/components/sections/market-section";
 import { MarketStatus } from "@/components/market/market-status";
 import { BidSection } from "@/components/sections/bid-section";
 import { DeadlineSection } from "@/components/sections/deadline-section";
 import { ExpiredState } from "@/components/sections/expired-state";
 import { OperatorClose } from "@/components/sections/operator-close";
 import { track } from "@/lib/analytics";
+
+const TrustSignals = dynamic(
+  () => import("@/components/sections/trust-signals").then((m) => ({ default: m.TrustSignals })),
+  { ssr: false }
+);
+const MarketSection = dynamic(
+  () => import("@/components/sections/market-section").then((m) => ({ default: m.MarketSection })),
+  { ssr: false }
+);
+const ProofSection = dynamic(
+  () => import("@/components/sections/proof-section").then((m) => ({ default: m.ProofSection })),
+  { ssr: false }
+);
+const FAQSection = dynamic(
+  () => import("@/components/sections/faq-section").then((m) => ({ default: m.FAQSection })),
+  { ssr: false }
+);
+
 import {
   FALLBACK_STATS,
   DEFAULT_TOTAL_SLOTS,
   DEFAULT_ACCEPTED_SLOTS,
 } from "@/lib/constants";
+
+function SectionSkeleton({ height = "h-48" }: { height?: string }) {
+  return <div className={`${height} bg-surface-raised/30 animate-pulse rounded-lg mx-6 my-8`} />;
+}
 
 export interface LiveData {
   remainingSlots: number;
@@ -105,7 +127,17 @@ export default function PartnersPage() {
           <div className="w-16 h-px bg-accent/40 mx-auto" />
           <Offerings />
           <div className="w-16 h-px bg-accent/40 mx-auto" />
-          <MarketSection />
+          <Suspense fallback={<SectionSkeleton height="h-32" />}>
+            <TrustSignals />
+          </Suspense>
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
+          <Suspense fallback={<SectionSkeleton height="h-96" />}>
+            <MarketSection />
+          </Suspense>
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
+          <Suspense fallback={<SectionSkeleton height="h-64" />}>
+            <ProofSection />
+          </Suspense>
           <div className="w-16 h-px bg-accent/40 mx-auto" />
 
           {expired ? (
@@ -113,6 +145,10 @@ export default function PartnersPage() {
           ) : (
             <>
               <BidSection />
+              <div className="w-16 h-px bg-accent/40 mx-auto" />
+              <Suspense fallback={<SectionSkeleton height="h-96" />}>
+                <FAQSection />
+              </Suspense>
               <div className="w-16 h-px bg-accent/40 mx-auto" />
               <DeadlineSection />
             </>
