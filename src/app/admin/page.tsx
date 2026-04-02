@@ -5,22 +5,21 @@ import { useRouter } from "next/navigation";
 import { DEADLINE_UTC } from "@/lib/constants";
 
 // ─── Types matching actual API responses ────────────────
+// ClawdBid shape from GET /api/admin/bids
 
 interface Bid {
-  id: string;
-  bidder_name: string;
-  bidder_email: string;
-  bidder_company: string;
+  bid_id: string;
+  company: string;
+  name: string;
+  email: string;
+  title: string;
   bid_amount: number;
+  message: string;
   status: string;
-  source: string;
-  audit_score: number;
-  classification: string;
-  notes: string;
-  domain: string;
-  strongest_gap: string;
-  stage_history: Array<{ stage: string; ts: string }>;
-  created_at: string;
+  status_note?: string;
+  agreement_accepted: boolean;
+  consent_hash: string;
+  submitted_at: string;
   updated_at: string;
 }
 
@@ -59,7 +58,7 @@ interface Toast {
   type: "success" | "error" | "info";
 }
 
-type SortKey = "bid_amount" | "created_at" | "bidder_company" | "status";
+type SortKey = "bid_amount" | "submitted_at" | "company" | "status";
 type SortDir = "asc" | "desc";
 
 // Status transitions — matches API VALID_TRANSITIONS exactly
@@ -107,7 +106,7 @@ export default function MissionControl() {
   // ─── UI state ──────
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortKey, setSortKey] = useState<SortKey>("submitted_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [confirmAction, setConfirmAction] = useState<{
     bid: Bid;
@@ -135,8 +134,8 @@ export default function MissionControl() {
 
   // ─── Clear email compose when switching bids (W10) ──────
   useEffect(() => {
-    if (selectedBid?.id !== prevSelectedBidId.current) {
-      prevSelectedBidId.current = selectedBid?.id ?? null;
+    if (selectedBid?.bid_id !== prevSelectedBidId.current) {
+      prevSelectedBidId.current = selectedBid?.bid_id ?? null;
       setEmailSubject("");
       setEmailBody("");
     }
@@ -182,7 +181,7 @@ export default function MissionControl() {
       setLastRefresh(new Date());
       // Sync selected bid with fresh data
       setSelectedBid((prev) =>
-        prev ? newBids.find((b: Bid) => b.id === prev.id) ?? null : null
+        prev ? newBids.find((b: Bid) => b.bid_id === prev.bid_id) ?? null : null
       );
     } catch {
       addToast("Failed to refresh data", "error");
@@ -272,12 +271,12 @@ export default function MissionControl() {
       case "bid_amount":
         cmp = a.bid_amount - b.bid_amount;
         break;
-      case "created_at":
+      case "submitted_at":
         cmp =
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
         break;
-      case "bidder_company":
-        cmp = a.bidder_company.localeCompare(b.bidder_company);
+      case "company":
+        cmp = a.company.localeCompare(b.company);
         break;
       case "status":
         cmp = a.status.localeCompare(b.status);
@@ -300,10 +299,10 @@ export default function MissionControl() {
         // Optimistic update
         const updated = { status: newStatus, updated_at: new Date().toISOString() };
         setBids((prev) =>
-          prev.map((b) => (b.id === bidId ? { ...b, ...updated } : b))
+          prev.map((b) => (b.bid_id === bidId ? { ...b, ...updated } : b))
         );
         setSelectedBid((prev) =>
-          prev?.id === bidId ? { ...prev, ...updated } : prev
+          prev?.bid_id === bidId ? { ...prev, ...updated } : prev
         );
         addToast(
           `Status → ${STATUS_LABELS[newStatus] || newStatus}`,
@@ -652,10 +651,10 @@ export default function MissionControl() {
               <tr className="border-b border-white/10 text-white/40 font-mono text-xs uppercase">
                 {(
                   [
-                    ["bidder_company", "Company"],
+                    ["company", "Company"],
                     ["bid_amount", "Amount"],
                     ["status", "Status"],
-                    ["created_at", "Submitted"],
+                    ["submitted_at", "Submitted"],
                   ] as [SortKey, string][]
                 ).map(([key, label]) => (
                   <th
@@ -677,22 +676,22 @@ export default function MissionControl() {
             <tbody>
               {sortedBids.map((bid) => (
                 <tr
-                  key={bid.id}
+                  key={bid.bid_id}
                   className={`border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${
-                    selectedBid?.id === bid.id ? "bg-white/[0.07]" : ""
+                    selectedBid?.bid_id === bid.bid_id ? "bg-white/[0.07]" : ""
                   }`}
                   onClick={() =>
                     setSelectedBid(
-                      selectedBid?.id === bid.id ? null : bid
+                      selectedBid?.bid_id === bid.bid_id ? null : bid
                     )
                   }
                 >
                   <td className="py-3 px-4">
                     <div className="font-medium text-white hover:text-[#00FFC2] transition-colors">
-                      {bid.bidder_company}
+                      {bid.company}
                     </div>
                     <div className="text-white/30 text-xs">
-                      {bid.bidder_name} · {bid.bidder_email}
+                      {bid.name} · {bid.email}
                     </div>
                   </td>
                   <td className="py-3 px-4 font-mono text-[#00FFC2] font-bold">
@@ -709,7 +708,7 @@ export default function MissionControl() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-white/40 text-xs font-mono">
-                    {new Date(bid.created_at).toLocaleDateString("en-US", {
+                    {new Date(bid.submitted_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       hour: "numeric",
@@ -720,7 +719,7 @@ export default function MissionControl() {
                     className="py-3 px-4 text-right"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {updating === bid.id ? (
+                    {updating === bid.bid_id ? (
                       <span className="text-white/30 text-xs font-mono">
                         updating...
                       </span>
@@ -780,11 +779,16 @@ export default function MissionControl() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-lg font-bold">
-                    {selectedBid.bidder_company}
+                    {selectedBid.company}
                   </h2>
                   <div className="text-sm text-white/50">
-                    {selectedBid.bidder_name}
+                    {selectedBid.name}
                   </div>
+                  {selectedBid.title && (
+                    <div className="text-xs text-white/30">
+                      {selectedBid.title}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => setSelectedBid(null)}
@@ -814,90 +818,44 @@ export default function MissionControl() {
                 <div className="flex justify-between text-sm">
                   <span className="text-white/40">Email</span>
                   <button
-                    onClick={() => copyToClipboard(selectedBid.bidder_email)}
+                    onClick={() => copyToClipboard(selectedBid.email)}
                     className="text-white/70 hover:text-[#00FFC2] text-xs font-mono transition-colors"
                     title="Click to copy"
                   >
-                    {selectedBid.bidder_email}
+                    {selectedBid.email}
                   </button>
                 </div>
-                {selectedBid.domain && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Domain</span>
-                    <span className="text-white/70 text-xs font-mono">
-                      {selectedBid.domain}
-                    </span>
-                  </div>
-                )}
-                {selectedBid.source && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Source</span>
-                    <span className="text-white/70 text-xs font-mono">
-                      {selectedBid.source}
-                    </span>
-                  </div>
-                )}
-                {selectedBid.audit_score > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Audit Score</span>
-                    <span className="text-white/70 font-mono">
-                      {selectedBid.audit_score}
-                    </span>
-                  </div>
-                )}
-                {selectedBid.classification && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Classification</span>
-                    <span className="text-white/70 text-xs font-mono">
-                      {selectedBid.classification}
-                    </span>
-                  </div>
-                )}
-                {selectedBid.strongest_gap && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/40">Strongest Gap</span>
-                    <span className="text-white/70 text-xs">
-                      {selectedBid.strongest_gap}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Submitted</span>
+                  <span className="text-white/70 text-xs font-mono">
+                    {new Date(selectedBid.submitted_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-white/40">Ref</span>
+                  <button
+                    onClick={() => copyToClipboard(selectedBid.bid_id)}
+                    className="text-white/40 hover:text-[#00FFC2] text-xs font-mono transition-colors"
+                    title="Click to copy bid ID"
+                  >
+                    {selectedBid.bid_id.slice(0, 12)}...
+                  </button>
+                </div>
               </div>
 
-              {/* Stage history */}
-              {selectedBid.stage_history.length > 0 && (
+              {/* Message / Notes */}
+              {(selectedBid.message || selectedBid.status_note) && (
                 <div>
                   <div className="text-xs text-white/30 font-mono mb-2">
-                    STAGE HISTORY
-                  </div>
-                  <div className="space-y-1">
-                    {selectedBid.stage_history.map((sh, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <div className="h-1.5 w-1.5 rounded-full bg-[#00FFC2]/50" />
-                        <span className="text-white/50 font-mono">
-                          {sh.stage}
-                        </span>
-                        <span className="text-white/20 font-mono ml-auto">
-                          {new Date(sh.ts).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {selectedBid.notes && (
-                <div>
-                  <div className="text-xs text-white/30 font-mono mb-2">
-                    NOTES
+                    {selectedBid.message ? "MESSAGE" : "STATUS NOTE"}
                   </div>
                   <div className="text-xs text-white/50 rounded-lg bg-white/5 p-3">
-                    {selectedBid.notes}
+                    {selectedBid.message || selectedBid.status_note}
                   </div>
                 </div>
               )}
@@ -905,13 +863,13 @@ export default function MissionControl() {
               {/* Quick actions */}
               <div className="flex gap-2 flex-wrap">
                 <button
-                  onClick={() => resendNotification(selectedBid.id)}
+                  onClick={() => resendNotification(selectedBid.bid_id)}
                   className="px-3 py-1.5 rounded-lg text-xs font-mono bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
                 >
                   Resend Notification
                 </button>
                 <button
-                  onClick={() => copyToClipboard(selectedBid.bidder_email)}
+                  onClick={() => copyToClipboard(selectedBid.email)}
                   className="px-3 py-1.5 rounded-lg text-xs font-mono bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
                 >
                   Copy Email
@@ -939,7 +897,7 @@ export default function MissionControl() {
                     className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white text-sm placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none resize-none"
                   />
                   <button
-                    onClick={() => sendCustomEmail(selectedBid.id)}
+                    onClick={() => sendCustomEmail(selectedBid.bid_id)}
                     disabled={
                       sendingEmail ||
                       !emailSubject.trim() ||
@@ -949,7 +907,7 @@ export default function MissionControl() {
                   >
                     {sendingEmail
                       ? "Sending..."
-                      : `Send to ${selectedBid.bidder_email}`}
+                      : `Send to ${selectedBid.email}`}
                   </button>
                 </div>
               </div>
@@ -1018,24 +976,24 @@ export default function MissionControl() {
                     : confirmAction.status === "onboarded"
                       ? "Mark Onboarded"
                       : "Waitlist"}{" "}
-              {confirmAction.bid.bidder_company}?
+              {confirmAction.bid.company}?
             </h3>
             <p className="text-sm text-white/50 mb-1">
-              {confirmAction.bid.bidder_name} · $
+              {confirmAction.bid.name} · $
               {Number(confirmAction.bid.bid_amount).toLocaleString()}
             </p>
             <p className="text-sm text-white/40 mb-6">
               {confirmAction.status === "accepted" && slotsRemaining <= 0
-                ? `⚠ ALL SLOTS ARE FULL. Accepting will over-allocate. This will email ${confirmAction.bid.bidder_email} the signed contract PDF and payment instructions.`
+                ? `⚠ ALL SLOTS ARE FULL. Accepting will over-allocate. This will email ${confirmAction.bid.email} the signed contract PDF and payment instructions.`
                 : confirmAction.status === "accepted"
-                ? `This will email ${confirmAction.bid.bidder_email} the signed contract PDF and payment instructions.`
+                ? `This will email ${confirmAction.bid.email} the signed contract PDF and payment instructions.`
                 : confirmAction.status === "declined"
-                  ? `This will email ${confirmAction.bid.bidder_email} a decline notification. This action cannot be undone.`
+                  ? `This will email ${confirmAction.bid.email} a decline notification. This action cannot be undone.`
                   : confirmAction.status === "paid"
                     ? "This marks payment as received. No email is sent."
                     : confirmAction.status === "onboarded"
                       ? "This marks the partner as onboarded."
-                      : `This will email ${confirmAction.bid.bidder_email} a waitlist notification.`}
+                      : `This will email ${confirmAction.bid.email} a waitlist notification.`}
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1046,7 +1004,7 @@ export default function MissionControl() {
               </button>
               <button
                 onClick={() =>
-                  updateStatus(confirmAction.bid.id, confirmAction.status)
+                  updateStatus(confirmAction.bid.bid_id, confirmAction.status)
                 }
                 disabled={!!updating}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-30 ${

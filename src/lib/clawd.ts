@@ -222,8 +222,12 @@ export async function getBids(): Promise<{ total: number; bids: ClawdBid[] }> {
 }
 
 export async function getBid(bidId: string): Promise<ClawdBid> {
-  // Use status endpoint which returns bid detail
-  return clawdFetch<ClawdBid>(`/api/marketplace/bid/${encodeURIComponent(bidId)}/status`);
+  // The /status endpoint returns lite data (no email/name).
+  // Fetch from the full bids list and find the matching bid.
+  const { bids } = await getBids();
+  const bid = bids.find((b) => b.bid_id === bidId);
+  if (!bid) throw new Error(`Bid ${bidId} not found`);
+  return bid;
 }
 
 export async function updateBid(
