@@ -2,6 +2,13 @@
 // All marketplace data lives on Railway in JSONL on a volume.
 // Auth: Authorization: Bearer {RAILWAY_API_TOKEN}
 
+// ── Configuration ───────────────────────────────────────
+
+const DEFAULT_TIMEOUT_MS = 8000;
+const RETRY_STATUS_CODES = [502, 503, 504];
+const RETRY_DELAY_MS = 1000;
+const MAX_RETRIES = 1; // GET only
+
 const getBaseUrl = () => {
   const url = process.env.RAILWAY_API_URL;
   if (!url) throw new Error("RAILWAY_API_URL is not configured");
@@ -14,26 +21,120 @@ const getToken = () => {
   return token;
 };
 
+function generateRequestId(): string {
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// ── Core Fetch ──────────────────────────────────────────
+
+export interface ClawdFetchOptions extends RequestInit {
+  timeout?: number;
+  retries?: number;
+}
+
 async function clawdFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: ClawdFetchOptions = {}
 ): Promise<T> {
-  const url = `${getBaseUrl()}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  const { timeout = DEFAULT_TIMEOUT_MS, retries, ...fetchOptions } = options;
+  const method = (fetchOptions.method || "GET").toUpperCase();
+  const requestId = generateRequestId();
+  const maxRetries = retries ?? (method === "GET" ? MAX_RETRIES : 0);
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Clawd ${res.status}: ${text}`);
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const start = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      if (attempt > 0) {
+        console.warn(`[Clawd][${requestId}] Retry ${attempt}/${maxRetries} ${method} ${path}`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      }
+
+      const url = `${getBaseUrl()}${path}`;
+      const res = await fetch(url, {
+        ...fetchOptions,
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          "Content-Type": "application/json",
+          "X-Request-ID": requestId,
+          ...fetchOptions.headers,
+        },
+      });
+
+      const elapsed = Date.now() - start;
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.warn(`[Clawd][${requestId}] ${method} ${path} → ${res.status} (${elapsed}ms)`);
+
+        // Retry on transient errors for GET
+        if (RETRY_STATUS_CODES.includes(res.status) && attempt < maxRetries) {
+          // Handle 429 with Retry-After
+          if (res.status === 429) {
+            const retryAfter = res.headers.get("Retry-After");
+            const waitMs = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 5000) : 2000;
+            await new Promise((r) => setTimeout(r, waitMs));
+          }
+          lastError = new Error(`Clawd ${res.status}: ${text}`);
+          continue;
+        }
+
+        throw new Error(`Clawd ${res.status}: ${text}`);
+      }
+
+      const elapsed2 = Date.now() - start;
+      console.log(`[Clawd][${requestId}] ${method} ${path} → ${res.status} (${elapsed2}ms)`);
+      return res.json() as Promise<T>;
+    } catch (err) {
+      const elapsed = Date.now() - start;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        console.warn(`[Clawd][${requestId}] ${method} ${path} → TIMEOUT (${elapsed}ms)`);
+        lastError = new Error(`Clawd timeout: ${method} ${path} (${timeout}ms)`);
+        if (attempt < maxRetries) continue;
+        throw lastError;
+      }
+      if (err instanceof Error && err.message.startsWith("Clawd ")) {
+        throw err;
+      }
+      console.warn(`[Clawd][${requestId}] ${method} ${path} → FAILED (${elapsed}ms): ${err instanceof Error ? err.message : err}`);
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxRetries) continue;
+      throw lastError;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  return res.json() as Promise<T>;
+  throw lastError || new Error(`Clawd fetch failed: ${path}`);
+}
+
+// ── Connection Check ────────────────────────────────────
+
+export async function checkClawdConnection(): Promise<{
+  connected: boolean;
+  latency: number;
+  error?: string;
+}> {
+  const start = Date.now();
+  try {
+    await getSlots();
+    return { connected: true, latency: Date.now() - start };
+  } catch (err) {
+    return {
+      connected: false,
+      latency: Date.now() - start,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 // ── Intake / Leads ──────────────────────────────────────
@@ -228,6 +329,13 @@ export async function getBid(bidId: string): Promise<ClawdBid> {
   const bid = bids.find((b) => b.bid_id === bidId);
   if (!bid) throw new Error(`Bid ${bidId} not found`);
   return bid;
+}
+
+// Lite endpoint — returns bid_id, company, status, bid_amount, timestamps only (no PII)
+export async function getBidStatus(
+  bidId: string
+): Promise<{ bid_id: string; company: string; status: string; bid_amount: number; created_at: string; updated_at: string }> {
+  return clawdFetch(`/api/marketplace/bid/${encodeURIComponent(bidId)}/status`);
 }
 
 export async function updateBid(

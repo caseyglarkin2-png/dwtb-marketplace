@@ -116,6 +116,7 @@ export default function BidFlow({
   const [signData, setSignData] = useState<SignData | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitRetryable, setSubmitRetryable] = useState(false);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [highValueConfirmed, setHighValueConfirmed] = useState(false);
   const [submitAttempts, setSubmitAttempts] = useState(0);
@@ -183,6 +184,7 @@ export default function BidFlow({
     if (submitting) return; // prevent double submit
     setSubmitting(true);
     setSubmitError(null);
+    setSubmitRetryable(false);
     setSubmitAttempts((a) => a + 1);
 
     try {
@@ -225,6 +227,7 @@ export default function BidFlow({
           setSubmitError(
             data.message || data.error || "Submission failed. Try again."
           );
+          if (data.retry) setSubmitRetryable(true);
         }
         return;
       }
@@ -236,6 +239,7 @@ export default function BidFlow({
       window.history.replaceState({}, "", "?step=confirmed");
     } catch {
       setSubmitError("Network error. Check your connection and try again.");
+      setSubmitRetryable(true);
       track("bid_submit_fail", { error: "network", attempts: submitAttempts });
     } finally {
       setSubmitting(false);
@@ -725,7 +729,7 @@ export default function BidFlow({
           {submitError && (
             <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
               {submitError}
-              {submitError.includes("Network error") && submitAttempts < 3 && (
+              {submitRetryable && submitAttempts < 3 && (
                 <button
                   onClick={handleSubmit}
                   className="block mt-2 text-accent underline text-xs hover:opacity-80"

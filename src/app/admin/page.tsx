@@ -132,6 +132,10 @@ export default function MissionControl() {
   // ─── Countdown state ──────
   const [countdown, setCountdown] = useState("");
 
+  // ─── Railway health state ──────
+  const [railwayOnline, setRailwayOnline] = useState<boolean | null>(null);
+  const [railwayLatency, setRailwayLatency] = useState<number | null>(null);
+
   // ─── Clear email compose when switching bids (W10) ──────
   useEffect(() => {
     if (selectedBid?.bid_id !== prevSelectedBidId.current) {
@@ -226,6 +230,28 @@ export default function MissionControl() {
   }, []);
 
   // ─── Auth redirect ──────
+
+  // ─── Health check polling ──────
+  useEffect(() => {
+    const check = () => {
+      fetch("/api/health")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d) {
+            setRailwayOnline(d.railway_online);
+            setRailwayLatency(d.latency_ms);
+          } else {
+            setRailwayOnline(false);
+          }
+        })
+        .catch(() => setRailwayOnline(false));
+    };
+    check();
+    const interval = setInterval(check, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ─── Auth redirect (original) ──────
   if (authError) {
     router.push("/admin/login");
     return null;
@@ -424,6 +450,14 @@ export default function MissionControl() {
             <h1 className="text-lg font-bold tracking-wider">
               MISSION CONTROL
             </h1>
+            {railwayOnline !== null && (
+              <div className="flex items-center gap-1.5" title={railwayOnline ? `Railway online (${railwayLatency}ms)` : "Railway offline"}>
+                <div className={`h-2 w-2 rounded-full ${railwayOnline ? "bg-[#00FFC2]" : "bg-red-500 animate-pulse"}`} />
+                <span className="text-[10px] font-mono text-white/40">
+                  {railwayOnline ? `${railwayLatency}ms` : "OFFLINE"}
+                </span>
+              </div>
+            )}
             <div className="h-4 w-px bg-white/10" />
             <div className="flex items-center gap-2">
               <div

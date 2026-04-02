@@ -131,11 +131,25 @@ export async function POST(request: NextRequest) {
         signedAt,
       }),
     });
+
+    if (!clawdRes.bid_id) {
+      console.error("[Bids] Railway returned bid without bid_id");
+      return NextResponse.json(
+        { error: "SUBMISSION_FAILED", message: "Failed to submit bid. Please try again.", retry: true },
+        { status: 502 }
+      );
+    }
+
     bidId = clawdRes.bid_id;
+    console.log(`[Bids] Created bid ${bidId} for ${data.bidder_company} — $${data.bid_amount}`);
   } catch (err) {
-    console.error("Clawd lead creation failed:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[Bids] Railway bid creation failed:", message);
+
+    // Transient errors are retryable
+    const isTransient = message.includes("502") || message.includes("503") || message.includes("504") || message.includes("timeout");
     return NextResponse.json(
-      { error: "SUBMISSION_FAILED", message: "Failed to submit bid. Please try again." },
+      { error: "SUBMISSION_FAILED", message: "Failed to submit bid. Please try again.", retry: isTransient },
       { status: 502 }
     );
   }

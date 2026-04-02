@@ -19,6 +19,7 @@ interface StatsData {
   pipelineValue: number;
   strikeNow: number;
   asOf: string | null;
+  _source?: "live" | "cached" | "fallback";
 }
 
 export function Receipts() {
@@ -125,6 +126,9 @@ export function Receipts() {
                 day: "numeric",
                 year: "numeric",
               })}
+              {stats._source && stats._source !== "live" && (
+                <span className="ml-2 text-white/20">({stats._source})</span>
+              )}
             </span>
           </div>
         )}

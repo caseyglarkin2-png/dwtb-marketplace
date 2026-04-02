@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
 import { getBids } from "@/lib/clawd";
+import { BidsResponseSchema } from "@/lib/api-types";
 
 // GET /api/admin/bids — list all marketplace bids (admin only)
 export async function GET(request: NextRequest) {
@@ -10,13 +11,29 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { bids } = await getBids();
-    return NextResponse.json({ bids });
+    const raw = await getBids();
+    const parsed = BidsResponseSchema.safeParse(raw);
+
+    if (!parsed.success) {
+      console.warn("[Admin/Bids] Railway returned unexpected shape:", parsed.error.issues);
+      // Return what we can parse
+      return NextResponse.json({
+        bids: Array.isArray(raw?.bids) ? raw.bids : [],
+        total: raw?.total ?? 0,
+        _source: "live" as const,
+      });
+    }
+
+    return NextResponse.json({
+      bids: parsed.data.bids,
+      total: parsed.data.total,
+      _source: "live" as const,
+    });
   } catch (err) {
-    console.error("Clawd marketplace bids fetch failed:", err);
+    console.warn("[Admin/Bids] Railway fetch failed:", err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { error: "Failed to fetch bids" },
-      { status: 502 }
+      { error: "Backend unavailable", _source: "fallback" as const },
+      { status: 503 }
     );
   }
 }

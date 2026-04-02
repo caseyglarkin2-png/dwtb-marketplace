@@ -72,7 +72,8 @@ export async function PATCH(
   const now = new Date().toISOString();
 
   // Persist status update to Clawd
-  await updateBid(bidId, { status: newStatus });
+  const updated = await updateBid(bidId, { status: newStatus });
+  console.log(`[Admin] Bid ${bidId}: ${bid.status} → ${newStatus}`);
 
   // Audit trail
   appendAuditEntry({

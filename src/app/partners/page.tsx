@@ -29,6 +29,7 @@ export interface LiveData {
     strikeNow: number;
   };
   loaded: boolean;
+  _source?: "live" | "cached" | "fallback";
 }
 
 export default function PartnersPage() {
@@ -47,9 +48,19 @@ export default function PartnersPage() {
       fetch("/api/slots").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]).then(([slotData, statsData]) => {
+      // Use the "worst" source between slots and stats
+      const slotSource = slotData?._source || "fallback";
+      const statSource = statsData?._source || "fallback";
+      const source = slotSource === "fallback" || statSource === "fallback"
+        ? "fallback"
+        : slotSource === "cached" || statSource === "cached"
+          ? "cached"
+          : "live";
+
       setLiveData((prev) => ({
         ...prev,
         loaded: true,
+        _source: source as LiveData["_source"],
         remainingSlots:
           slotData?.remaining_slots ?? prev.remainingSlots,
         totalSlots: slotData?.total_slots ?? prev.totalSlots,

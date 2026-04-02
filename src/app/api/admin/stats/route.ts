@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         last_24h: clawdStats.last_24h,
         as_of: new Date().toISOString(),
         source: "clawd+constants",
+        _source: "live" as const,
       }],
     });
   } catch {
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
         last_24h: 0,
         as_of: new Date().toISOString(),
         source: "constants_only",
+        _source: "fallback" as const,
       }],
     });
   }

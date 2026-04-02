@@ -10,7 +10,7 @@ interface HeroProps {
 }
 
 export function Hero({ liveData }: HeroProps) {
-  const { remainingSlots, totalSlots, stats } = liveData;
+  const { remainingSlots, totalSlots, stats, _source } = liveData;
   const deadlineStr = DEADLINE.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -45,6 +45,9 @@ export function Hero({ liveData }: HeroProps) {
         <span className="text-accent text-sm font-mono font-medium tracking-wide">
           Q2 2026 OFFERING — NOW OPEN
         </span>
+        {_source && _source !== "live" && (
+          <span className="text-white/20 text-[10px] font-mono ml-1">({_source})</span>
+        )}
       </div>
 
       {/* Headline */}
