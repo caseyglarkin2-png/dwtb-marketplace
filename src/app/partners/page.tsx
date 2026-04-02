@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { isExpired } from "@/lib/deadline";
 import { BootSequence } from "@/components/boot-sequence";
 import { Hero } from "@/components/sections/hero";
@@ -10,10 +10,15 @@ import { BidSection } from "@/components/sections/bid-section";
 import { DeadlineSection } from "@/components/sections/deadline-section";
 import { ExpiredState } from "@/components/sections/expired-state";
 import { OperatorClose } from "@/components/sections/operator-close";
+import { track } from "@/lib/analytics";
 
 export default function PartnersPage() {
   const [bootComplete, setBootComplete] = useState(false);
   const expired = isExpired();
+
+  useEffect(() => {
+    track("page_load", { expired });
+  }, [expired]);
 
   return (
     <>
@@ -25,7 +30,7 @@ export default function PartnersPage() {
       )}
 
       {bootComplete && (
-        <div className="animate-[fadeIn_0.5s_ease-out]">
+        <main id="main-content" className="animate-[fadeIn_0.5s_ease-out]">
           <Hero />
           <VideoStage />
           <Receipts />
@@ -46,7 +51,7 @@ export default function PartnersPage() {
             DWTB?! Studios © {new Date().getFullYear()} · Private platform ·
             Not a public offering
           </footer>
-        </div>
+        </main>
       )}
     </>
   );

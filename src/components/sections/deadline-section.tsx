@@ -18,7 +18,7 @@ export function DeadlineSection() {
 
         <a
           href="#bid"
-          className="mt-8 inline-flex items-center gap-2 px-8 py-4 bg-accent text-surface font-semibold text-lg rounded-lg hover:bg-accent/90 transition-colors"
+          className="mt-8 inline-flex items-center gap-2 px-8 py-4 min-h-[48px] bg-accent text-surface font-semibold text-lg rounded-lg hover:bg-accent/90 transition-colors active:scale-[0.98]"
         >
           Submit Your Bid Now
         </a>

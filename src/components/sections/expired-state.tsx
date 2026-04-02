@@ -15,9 +15,9 @@ export function ExpiredState() {
         </h2>
 
         <p className="text-text-secondary text-lg max-w-xl mx-auto leading-relaxed">
-          DWTB?! Studios is now operating at full capacity with Q2 clients. No
-          new bids are being accepted. If the window reopens — you will hear
-          about it before anyone else does.
+          DWTB?! Studios is now operating at full capacity for Q2. No new
+          bids are being accepted. If the window reopens, you will hear about
+          it before anyone else does.
         </p>
       </div>
     </section>

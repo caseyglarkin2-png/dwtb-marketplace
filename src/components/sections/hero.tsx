@@ -1,4 +1,5 @@
 import { DEADLINE } from "@/lib/deadline";
+import { track } from "@/lib/analytics";
 
 export function Hero() {
   const deadlineStr = DEADLINE.toLocaleDateString("en-US", {
@@ -37,7 +38,8 @@ export function Hero() {
       {/* CTA */}
       <a
         href="#bid"
-        className="mt-10 inline-flex items-center gap-2 px-8 py-4 bg-accent text-surface font-semibold text-lg rounded-lg hover:bg-accent/90 transition-colors"
+        onClick={() => track("cta_click", { location: "hero" })}
+        className="mt-10 inline-flex items-center gap-2 px-8 py-4 min-h-[48px] bg-accent text-surface font-semibold text-lg rounded-lg hover:bg-accent/90 transition-colors active:scale-[0.98]"
       >
         Review Offer + Place Your Bid
       </a>

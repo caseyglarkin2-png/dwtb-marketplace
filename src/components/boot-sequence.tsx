@@ -74,7 +74,7 @@ export function BootSequence({ expired = false, onComplete }: BootSequenceProps)
   if (skipped) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-surface flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-surface flex flex-col items-center justify-center" role="status" aria-label="Loading DWTB Studios">
       <div className="font-mono text-sm md:text-base text-accent space-y-2 max-w-xl px-6">
         {lines.slice(0, visibleLines).map((line, i) => (
           <div

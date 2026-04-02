@@ -1,8 +1,30 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useInView } from "@/lib/hooks/use-in-view";
+
 export function VideoStage() {
-  const videoUrl = process.env.NEXT_PUBLIC_VIDEO_URL;
+  const envUrl = process.env.NEXT_PUBLIC_VIDEO_URL;
+  const [videoUrl, setVideoUrl] = useState(envUrl || "");
+  const { ref, isInView } = useInView();
+
+  // Allow admin-configured video URL override
+  useEffect(() => {
+    if (envUrl) return; // env var takes precedence
+    fetch("/api/slots")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.video_url) setVideoUrl(data.video_url);
+      })
+      .catch(() => {});
+  }, [envUrl]);
 
   return (
-    <section id="machine" className="py-24 md:py-32 px-6">
+    <section
+      id="machine"
+      ref={ref as React.RefObject<HTMLElement>}
+      className={`py-24 md:py-32 px-6 transition-opacity duration-700 ${isInView ? "opacity-100" : "opacity-0"}`}
+    >
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <h2 className="text-3xl md:text-5xl font-bold mb-4">The Machine</h2>
@@ -26,8 +48,9 @@ export function VideoStage() {
             <iframe
               src={videoUrl}
               className="absolute inset-0 w-full h-full"
-              allow="autoplay; fullscreen"
+              allow="autoplay; fullscreen; encrypted-media"
               allowFullScreen
+              loading="lazy"
               title="Casey Glarkin — The Freight Marketer"
             />
           ) : (

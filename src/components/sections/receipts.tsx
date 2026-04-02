@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { FALLBACK_STATS } from "@/lib/constants";
+import { useInView } from "@/lib/hooks/use-in-view";
 
 const TIMELINE = [
   { date: "Q1 2026", event: "DWTB?! Studios launched" },
@@ -25,6 +26,7 @@ export function Receipts() {
     ...FALLBACK_STATS,
     asOf: null,
   });
+  const { ref, isInView } = useInView();
 
   useEffect(() => {
     fetch("/api/stats")
@@ -40,12 +42,16 @@ export function Receipts() {
   }, []);
 
   return (
-    <section id="receipts" className="py-24 md:py-32 px-6">
+    <section
+      id="receipts"
+      ref={ref as React.RefObject<HTMLElement>}
+      className={`py-24 md:py-32 px-6 transition-opacity duration-700 ${isInView ? "opacity-100" : "opacity-0"}`}
+    >
       <div className="max-w-5xl mx-auto">
         <h2 className="text-3xl md:text-5xl font-bold mb-12">Proof.</h2>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-8 mb-16">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-16">
           <StatCard
             end={stats.proposalsSent}
             label="Proposals Sent"
@@ -74,13 +80,27 @@ export function Receipts() {
           />
         </div>
 
-        {/* Timeline */}
-        <div className="border-l-2 border-border pl-6 space-y-6">
+        {/* Compressed timeline — horizontal on desktop, vertical on mobile */}
+        <div className="hidden md:flex items-center justify-between gap-2 py-4">
+          {TIMELINE.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="flex flex-col items-center text-center min-w-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-accent mb-2" />
+                <div className="font-mono text-xs text-accent whitespace-nowrap">{item.date}</div>
+                <div className="text-text-muted text-xs mt-0.5 whitespace-nowrap">{item.event}</div>
+              </div>
+              {i < TIMELINE.length - 1 && (
+                <div className="flex-1 h-px bg-border min-w-[24px] -mt-6" />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="md:hidden border-l-2 border-border pl-5 space-y-4">
           {TIMELINE.map((item, i) => (
             <div key={i} className="relative">
-              <div className="absolute -left-[31px] top-1 w-3 h-3 rounded-full bg-accent border-2 border-surface" />
-              <div className="font-mono text-sm text-accent">{item.date}</div>
-              <div className="text-text-secondary mt-1">{item.event}</div>
+              <div className="absolute -left-[27px] top-1 w-2.5 h-2.5 rounded-full bg-accent border-2 border-surface" />
+              <div className="font-mono text-xs text-accent">{item.date}</div>
+              <div className="text-text-muted text-xs mt-0.5">{item.event}</div>
             </div>
           ))}
         </div>
@@ -120,16 +140,16 @@ function StatCard({
 }) {
   return (
     <div
-      className={`bg-surface-raised border border-border rounded-lg p-6 text-center ${className}`}
+      className={`bg-surface-raised border border-border rounded-lg p-4 md:p-5 text-center ${className}`}
     >
       <AnimatedCounter
         end={end}
         prefix={prefix}
         suffix={suffix}
         formatFn={formatFn}
-        className="text-3xl md:text-4xl font-bold font-mono text-accent"
+        className="text-2xl md:text-3xl font-bold font-mono text-accent"
       />
-      <div className="text-text-muted text-sm mt-2 font-mono">{label}</div>
+      <div className="text-text-muted text-xs mt-1.5 font-mono uppercase tracking-wider">{label}</div>
     </div>
   );
 }

@@ -36,7 +36,7 @@ export function Countdown({ deadline, onExpire }: CountdownProps) {
   }
 
   return (
-    <div className="font-mono text-4xl md:text-7xl font-bold tracking-wider text-text-primary">
+    <div className="font-mono text-4xl md:text-7xl font-bold tracking-wider text-text-primary" role="timer" aria-label={`${time.days} days ${time.hours} hours ${time.minutes} minutes ${time.seconds} seconds remaining`}>
       <span>{pad(time.days)}</span>
       <span className="text-text-muted mx-1 md:mx-3">:</span>
       <span>{pad(time.hours)}</span>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import ContractPreview from "./contract-preview";
 import ConsentCapture from "./consent-capture";
 import BidConfirmation from "./bid-confirmation";
+import { track } from "@/lib/analytics";
 
 interface BidFlowProps {
   minBid: number;
@@ -108,6 +109,7 @@ export default function BidFlow({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [highValueConfirmed, setHighValueConfirmed] = useState(false);
+  const [submitAttempts, setSubmitAttempts] = useState(0);
 
   // Draft persistence
   useEffect(() => {
@@ -126,6 +128,7 @@ export default function BidFlow({
 
   useEffect(() => {
     if (step > 1 && step < 5) {
+      track("bid_step", { step });
       window.history.pushState({ step }, "", `?step=${step}`);
     }
   }, [step]);
@@ -160,8 +163,10 @@ export default function BidFlow({
 
   const handleSubmit = async () => {
     if (!signData) return;
+    if (submitting) return; // prevent double submit
     setSubmitting(true);
     setSubmitError(null);
+    setSubmitAttempts((a) => a + 1);
 
     try {
       const res = await fetch("/api/bids", {
@@ -184,18 +189,36 @@ export default function BidFlow({
       const data = await res.json();
 
       if (!res.ok) {
-        setSubmitError(
-          data.message || data.error || "Submission failed. Try again."
-        );
+        if (res.status === 409) {
+          // Duplicate / idempotent submission — treat as success
+          if (data.bid_id) {
+            setResult(data);
+            setStep(5);
+            clearDraft();
+            window.history.replaceState({}, "", "?step=confirmed");
+            return;
+          }
+          setSubmitError("This bid has already been submitted.");
+        } else if (res.status === 429) {
+          setSubmitError("Too many attempts. Please wait a moment and try again.");
+        } else if (res.status === 403) {
+          setSubmitError("The bid window has closed. Submissions are no longer accepted.");
+        } else {
+          setSubmitError(
+            data.message || data.error || "Submission failed. Try again."
+          );
+        }
         return;
       }
 
       setResult(data);
       setStep(5);
       clearDraft();
+      track("bid_submit_success", { bid_id: data.bid_id, amount: bidder.amount });
       window.history.replaceState({}, "", "?step=confirmed");
     } catch {
       setSubmitError("Network error. Check your connection and try again.");
+      track("bid_submit_fail", { error: "network", attempts: submitAttempts });
     } finally {
       setSubmitting(false);
     }
@@ -235,7 +258,7 @@ export default function BidFlow({
   return (
     <div className="space-y-8">
       {/* Step indicator */}
-      <div className="flex items-center justify-center gap-2">
+      <nav aria-label={`Bid submission step ${step} of 4`} className="flex items-center justify-center gap-2">
         {[1, 2, 3, 4].map((s) => (
           <div key={s} className="flex items-center gap-2">
             <div
@@ -250,7 +273,7 @@ export default function BidFlow({
             {s < 4 && <div className="w-8 h-px bg-white/10" />}
           </div>
         ))}
-      </div>
+      </nav>
 
       {/* Step 1: Review Offer */}
       {step === 1 && (
@@ -295,7 +318,7 @@ export default function BidFlow({
 
           <button
             onClick={() => setStep(2)}
-            className="w-full rounded-lg bg-[#00FFC2] px-6 py-3 font-semibold text-black transition-opacity hover:opacity-90"
+            className="w-full rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.98]"
           >
             Continue to Bid Entry
           </button>
@@ -309,59 +332,71 @@ export default function BidFlow({
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+              <label htmlFor="bidder-name" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
                 Your Name
               </label>
               <input
+                id="bidder-name"
                 type="text"
                 value={bidder.name}
                 onChange={(e) => updateBidder("name", e.target.value)}
+                aria-required="true"
+                autoComplete="name"
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
                 placeholder="Casey Glarkin"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+              <label htmlFor="bidder-title" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
                 Title
               </label>
               <input
+                id="bidder-title"
                 type="text"
                 value={bidder.title}
                 onChange={(e) => updateBidder("title", e.target.value)}
+                aria-required="true"
+                autoComplete="organization-title"
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
                 placeholder="VP of Marketing"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+              <label htmlFor="bidder-company" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
                 Company
               </label>
               <input
+                id="bidder-company"
                 type="text"
                 value={bidder.company}
                 onChange={(e) => updateBidder("company", e.target.value)}
+                aria-required="true"
+                autoComplete="organization"
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
                 placeholder="Acme Freight"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+              <label htmlFor="bidder-email" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
                 Email
               </label>
               <input
+                id="bidder-email"
                 type="email"
                 value={bidder.email}
                 onChange={(e) => updateBidder("email", e.target.value)}
+                aria-required="true"
+                autoComplete="email"
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
                 placeholder="you@company.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+              <label htmlFor="bid-amount" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
                 Bid Amount (USD)
               </label>
               <div className="relative">
@@ -369,6 +404,7 @@ export default function BidFlow({
                   $
                 </span>
                 <input
+                  id="bid-amount"
                   type="number"
                   value={bidder.amount}
                   onChange={(e) =>
@@ -376,6 +412,7 @@ export default function BidFlow({
                   }
                   min={minBid}
                   step={minIncrement}
+                  aria-required="true"
                   className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 pl-8 text-white font-mono placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
                 />
               </div>
@@ -387,10 +424,11 @@ export default function BidFlow({
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+              <label htmlFor="bid-note" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
                 Note (optional)
               </label>
               <textarea
+                id="bid-note"
                 value={bidder.note}
                 onChange={(e) => updateBidder("note", e.target.value)}
                 rows={3}
@@ -404,14 +442,14 @@ export default function BidFlow({
           <div className="flex gap-3">
             <button
               onClick={() => setStep(1)}
-              className="rounded-lg border border-white/20 px-6 py-3 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+              className="rounded-lg border border-white/20 px-6 py-3 min-h-[48px] text-white/60 hover:text-white hover:border-white/40 transition-colors"
             >
               Back
             </button>
             <button
               onClick={() => setStep(3)}
               disabled={!step1Valid || !step2Valid}
-              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               Review + Sign Agreement
             </button>
@@ -449,14 +487,14 @@ export default function BidFlow({
           <div className="flex gap-3">
             <button
               onClick={() => setStep(2)}
-              className="rounded-lg border border-white/20 px-6 py-3 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+              className="rounded-lg border border-white/20 px-6 py-3 min-h-[48px] text-white/60 hover:text-white hover:border-white/40 transition-colors"
             >
               Back
             </button>
             <button
               onClick={() => setStep(4)}
               disabled={!signData}
-              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               Continue to Confirm
             </button>
@@ -517,15 +555,23 @@ export default function BidFlow({
           </div>
 
           {submitError && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+            <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
               {submitError}
+              {submitError.includes("Network error") && submitAttempts < 3 && (
+                <button
+                  onClick={handleSubmit}
+                  className="block mt-2 text-accent underline text-xs hover:opacity-80"
+                >
+                  Retry submission
+                </button>
+              )}
             </div>
           )}
 
           <div className="flex gap-3">
             <button
               onClick={() => setStep(3)}
-              className="rounded-lg border border-white/20 px-6 py-3 text-white/60 hover:text-white hover:border-white/40 transition-colors"
+              className="rounded-lg border border-white/20 px-6 py-3 min-h-[48px] text-white/60 hover:text-white hover:border-white/40 transition-colors"
             >
               Back
             </button>
@@ -534,7 +580,7 @@ export default function BidFlow({
               disabled={
                 submitting || (bidder.amount > 50000 && !highValueConfirmed)
               }
-              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               {submitting
                 ? "Submitting..."

@@ -18,7 +18,7 @@ export default function SignaturePad({ onChange }: SignaturePadProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     return ctx;
@@ -122,7 +122,8 @@ export default function SignaturePad({ onChange }: SignaturePadProps) {
         <canvas
           ref={canvasRef}
           className="w-full cursor-crosshair touch-none"
-          style={{ height: 200 }}
+          style={{ height: 160 }}
+          aria-label="Signature pad — draw your signature here"
           onMouseDown={startDraw}
           onMouseMove={draw}
           onMouseUp={endDraw}

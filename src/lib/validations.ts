@@ -1,26 +1,26 @@
 import { z } from "zod";
 
+// Strip HTML tags as defense-in-depth against XSS
+const safeString = (min: number, msg: string) =>
+  z
+    .string()
+    .min(min, msg)
+    .max(255)
+    .transform((s) => s.replace(/<[^>]*>/g, "").trim());
+
 export const bidSubmissionSchema = z.object({
-  bidder_name: z
-    .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(255),
-  bidder_title: z
-    .string()
-    .min(2, "Title must be at least 2 characters")
-    .max(255),
-  bidder_company: z
-    .string()
-    .min(2, "Company must be at least 2 characters")
-    .max(255),
+  bidder_name: safeString(2, "Name must be at least 2 characters"),
+  bidder_title: safeString(2, "Title must be at least 2 characters"),
+  bidder_company: safeString(2, "Company must be at least 2 characters"),
   bidder_email: z.string().email("Invalid email address").max(255),
   bid_amount: z.number().positive("Bid must be positive"),
-  note: z.string().max(2000).optional(),
-  // E-sign fields
-  typed_name: z
+  note: z
     .string()
-    .min(2, "Typed name must be at least 2 characters")
-    .max(255),
+    .max(2000)
+    .transform((s) => s.replace(/<[^>]*>/g, "").trim())
+    .optional(),
+  // E-sign fields
+  typed_name: safeString(2, "Typed name must be at least 2 characters"),
   consent_given: z.literal(true, {
     message: "You must consent to the agreement",
   }),
