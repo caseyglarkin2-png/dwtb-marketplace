@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { FALLBACK_STATS } from "@/lib/constants";
 
@@ -10,8 +11,33 @@ const TIMELINE = [
   { date: "April 2026", event: "Private bid window open" },
 ];
 
+interface StatsData {
+  proposalsSent: number;
+  totalViews: number;
+  viewRate: number;
+  pipelineValue: number;
+  strikeNow: number;
+  asOf: string | null;
+}
+
 export function Receipts() {
-  const stats = FALLBACK_STATS;
+  const [stats, setStats] = useState<StatsData>({
+    ...FALLBACK_STATS,
+    asOf: null,
+  });
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.proposalsSent === "number") {
+          setStats(data);
+        }
+      })
+      .catch(() => {
+        // Keep fallback stats
+      });
+  }, []);
 
   return (
     <section id="receipts" className="py-24 md:py-32 px-6">
@@ -58,6 +84,20 @@ export function Receipts() {
             </div>
           ))}
         </div>
+
+        {/* Stats freshness (F19) */}
+        {stats.asOf && (
+          <div className="mt-8 text-center">
+            <span className="text-xs text-white/30 font-mono">
+              As of{" "}
+              {new Date(stats.asOf).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+          </div>
+        )}
       </div>
     </section>
   );

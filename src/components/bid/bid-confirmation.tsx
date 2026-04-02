@@ -7,6 +7,7 @@ interface BidConfirmationProps {
   contractVersion: string;
   signedAt: string;
   signatureHash: string;
+  bidderEmail?: string;
 }
 
 export default function BidConfirmation({
@@ -15,6 +16,7 @@ export default function BidConfirmation({
   status,
   contractVersion,
   signedAt,
+  bidderEmail,
 }: BidConfirmationProps) {
   const amountFormatted = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -76,6 +78,17 @@ export default function BidConfirmation({
         <br />
         Save your reference ID: {bidId.slice(0, 8)}
       </p>
+
+      {bidderEmail && (
+        <a
+          href={`/api/bids/receipt/${bidId}?email=${encodeURIComponent(bidderEmail)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block rounded-lg border border-[#00FFC2]/30 bg-[#00FFC2]/10 px-6 py-3 font-semibold text-[#00FFC2] text-sm transition-opacity hover:opacity-80"
+        >
+          Download Signed Contract (PDF)
+        </a>
+      )}
     </div>
   );
 }

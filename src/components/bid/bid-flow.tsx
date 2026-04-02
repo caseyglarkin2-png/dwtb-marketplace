@@ -227,6 +227,7 @@ export default function BidFlow({
         contractVersion={result.contract_version}
         signedAt={result.signed_at}
         signatureHash={result.signature_hash}
+        bidderEmail={bidder.email}
       />
     );
   }
