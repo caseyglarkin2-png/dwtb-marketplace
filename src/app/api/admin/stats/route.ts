@@ -29,7 +29,14 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json({
       stats: [{
-        ...FALLBACK_STATS,
+        proposals_sent: FALLBACK_STATS.proposalsSent,
+        total_views: FALLBACK_STATS.totalViews,
+        view_rate: FALLBACK_STATS.viewRate,
+        pipeline_value: FALLBACK_STATS.pipelineValue,
+        strike_now: FALLBACK_STATS.strikeNow,
+        total_leads: 0,
+        new_leads: 0,
+        last_24h: 0,
         as_of: new Date().toISOString(),
         source: "constants_only",
       }],

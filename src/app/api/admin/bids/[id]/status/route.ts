@@ -93,7 +93,7 @@ export async function PATCH(
       : newStatus === "declined"
         ? "bid_declined"
         : newStatus === "paid"
-          ? "bid_accepted"
+          ? "contract_signed"
           : "bid_waitlisted",
     entityType: "bid",
     entityId: bidId,

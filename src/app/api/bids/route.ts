@@ -223,7 +223,7 @@ async function sendBidEmails(bid: {
 
   // Email to Casey
   try {
-    await fetch("https://api.resend.com/emails", {
+    const adminRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${resendKey}`,
@@ -248,13 +248,16 @@ async function sendBidEmails(bid: {
         ].join("\n"),
       }),
     });
+    if (!adminRes.ok) {
+      console.error("Admin notification email failed:", adminRes.status, await adminRes.text().catch(() => ""));
+    }
   } catch (error) {
     console.error("Admin notification email failed:", error);
   }
 
   // Email to bidder
   try {
-    await fetch("https://api.resend.com/emails", {
+    const bidderRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${resendKey}`,
@@ -280,6 +283,9 @@ async function sendBidEmails(bid: {
         ].join("\n"),
       }),
     });
+    if (!bidderRes.ok) {
+      console.error("Bidder confirmation email failed:", bidderRes.status, await bidderRes.text().catch(() => ""));
+    }
   } catch (error) {
     console.error("Bidder confirmation email failed:", error);
   }

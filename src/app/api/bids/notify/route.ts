@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { validateAdminRequest } from "@/lib/admin-auth";
 
-// POST /api/bids/notify — send bid confirmation emails
+// POST /api/bids/notify — send bid confirmation emails (admin-only)
 // Accepts bid data directly in request body (no DB lookup)
 export async function POST(request: NextRequest) {
+  const isAdmin = await validateAdminRequest(request);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const bid = await request.json();
     if (!bid?.bidder_email || !bid?.bid_amount) {
