@@ -1,0 +1,15 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm ci && npm run build"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/api/time"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[deploy.resources]
+# Next.js 16 w/ App Router — 512MB is tight, 1GB is comfortable
+memoryMB = 1024
+cpuMillis = 1000
