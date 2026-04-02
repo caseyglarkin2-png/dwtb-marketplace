@@ -1,5 +1,3 @@
-import { createServiceClient } from "./supabase/server";
-
 export type AuditEventType =
   | "bid_submitted"
   | "bid_accepted"
@@ -24,19 +22,8 @@ export async function appendAuditEntry(params: {
   actorUa?: string;
   payload?: Record<string, unknown>;
 }) {
-  const supabase = createServiceClient();
-
-  const { error } = await supabase.from("audit_trail").insert({
-    event_type: params.eventType,
-    entity_type: params.entityType,
-    entity_id: params.entityId,
-    actor_email: params.actorEmail ?? null,
-    actor_ip: params.actorIp ?? null,
-    actor_ua: params.actorUa ?? null,
-    payload: params.payload ?? null,
-  });
-
-  if (error) {
-    console.error("Audit trail write failed:", error);
-  }
+  console.log(
+    `[AUDIT] ${params.eventType} | ${params.entityType}:${params.entityId}`,
+    params.payload ? JSON.stringify(params.payload) : ""
+  );
 }

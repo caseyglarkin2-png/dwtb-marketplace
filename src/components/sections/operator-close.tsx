@@ -1,8 +1,14 @@
+"use client";
+
+import { useInView } from "@/lib/hooks/use-in-view";
+
 export function OperatorClose() {
+  const { ref, isInView } = useInView();
+
   return (
-    <section id="operator" className="py-24 md:py-32 px-6">
+    <section id="operator" ref={ref as React.RefObject<HTMLElement>} className={`py-24 md:py-32 px-6 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold mb-6">
+        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
           Casey Glarkin. The Freight Marketer.
         </h2>
 

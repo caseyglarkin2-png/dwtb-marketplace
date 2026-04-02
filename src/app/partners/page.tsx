@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { isExpired } from "@/lib/deadline";
 import { BootSequence } from "@/components/boot-sequence";
+import { MarketTicker } from "@/components/market-ticker";
 import { Hero } from "@/components/sections/hero";
 import { VideoStage } from "@/components/sections/video-stage";
 import { Receipts } from "@/components/sections/receipts";
@@ -30,28 +31,44 @@ export default function PartnersPage() {
       )}
 
       {bootComplete && (
-        <main id="main-content" className="animate-[fadeIn_0.5s_ease-out]">
+        <>
+          <MarketTicker visible={bootComplete} />
+          <main id="main-content" className="animate-[fadeIn_0.5s_ease-out] pt-10">
           <Hero />
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
           <VideoStage />
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
           <Receipts />
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
 
           {expired ? (
             <ExpiredState />
           ) : (
             <>
               <BidSection />
+              <div className="w-16 h-px bg-accent/40 mx-auto" />
               <DeadlineSection />
             </>
           )}
 
+          <div className="w-16 h-px bg-accent/40 mx-auto" />
           <OperatorClose />
 
           {/* Footer */}
-          <footer className="py-8 px-6 text-center text-text-muted text-sm font-mono border-t border-border">
-            DWTB?! Studios © {new Date().getFullYear()} · Private platform ·
-            Not a public offering
+          <footer className="py-8 px-6 text-center border-t border-border">
+            <div className="text-xs font-mono text-text-muted space-x-3">
+              <span>SHA-256 Secured</span>
+              <span className="text-accent/40">·</span>
+              <span>ESIGN Compliant</span>
+              <span className="text-accent/40">·</span>
+              <span>Invite-Only Platform</span>
+            </div>
+            <div className="mt-2 text-xs text-text-muted/50 font-mono">
+              DWTB?! Studios © {new Date().getFullYear()}
+            </div>
           </footer>
         </main>
+        </>
       )}
     </>
   );

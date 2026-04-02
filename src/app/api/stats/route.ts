@@ -1,44 +1,31 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { FALLBACK_STATS } from "@/lib/constants";
+import { getPipeline } from "@/lib/clawd";
 
-// GET /api/stats — public stats with freshness indicator
+// GET /api/stats — public stats (live from Clawd pipeline)
 export async function GET() {
   try {
-    const supabase = createServiceClient();
-
-    const { data, error } = await supabase
-      .from("stats_snapshot")
-      .select("*")
-      .order("as_of", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error || !data) {
-      return NextResponse.json({
-        proposalsSent: FALLBACK_STATS.proposalsSent,
-        totalViews: FALLBACK_STATS.totalViews,
-        viewRate: FALLBACK_STATS.viewRate,
-        pipelineValue: FALLBACK_STATS.pipelineValue,
-        strikeNow: FALLBACK_STATS.strikeNow,
-        asOf: null,
-        source: "fallback",
-      });
-    }
-
+    const pipeline = await getPipeline();
+    const s = pipeline.stats;
     return NextResponse.json({
-      proposalsSent: data.proposals_sent,
-      totalViews: data.total_views,
-      viewRate: Number(data.view_rate),
-      pipelineValue: Number(data.pipeline_value),
-      strikeNow: data.strike_now,
-      asOf: data.as_of,
-      source: data.source,
+      proposalsSent: s.by_stage.proposal ?? 0,
+      totalViews: s.total_deals,
+      viewRate: s.total_deals > 0 ? Math.round((s.by_stage.proposal / s.total_deals) * 100) : 0,
+      pipelineValue: s.total_pipeline_value,
+      strikeNow: s.by_stage.lead ?? 0,
+      asOf: new Date().toISOString(),
+      source: "clawd",
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch stats" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Clawd pipeline fetch failed:", err);
+    return NextResponse.json({
+      proposalsSent: FALLBACK_STATS.proposalsSent,
+      totalViews: FALLBACK_STATS.totalViews,
+      viewRate: FALLBACK_STATS.viewRate,
+      pipelineValue: FALLBACK_STATS.pipelineValue,
+      strikeNow: FALLBACK_STATS.strikeNow,
+      asOf: null,
+      source: "fallback",
+    });
   }
 }

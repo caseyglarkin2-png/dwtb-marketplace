@@ -24,28 +24,33 @@ export default function BidConfirmation({
     minimumFractionDigits: 0,
   }).format(bidAmount);
 
+  const isWaitlisted = status === "waitlisted";
+
   return (
     <div className="text-center space-y-8">
+      {/* Status badge */}
       <div className="inline-flex items-center gap-2 rounded-full border border-[#00FFC2]/30 bg-[#00FFC2]/10 px-4 py-2">
         <span className="h-2 w-2 rounded-full bg-[#00FFC2] animate-pulse" />
         <span className="font-mono text-xs text-[#00FFC2] uppercase tracking-wider">
-          {status === "waitlisted" ? "Waitlisted" : "Bid Submitted"}
+          {isWaitlisted ? "Waitlisted" : "Request Submitted"}
         </span>
       </div>
 
+      {/* Heading */}
       <div>
         <h2 className="text-3xl font-bold text-white mb-2">
-          {status === "waitlisted"
-            ? "Your Bid Is On the Waitlist"
-            : "Your Bid Has Been Received"}
+          {isWaitlisted
+            ? "You&apos;re on the Waitlist"
+            : "You&apos;re In."}
         </h2>
-        <p className="text-white/60 max-w-md mx-auto">
-          {status === "waitlisted"
-            ? "All Q2 slots are currently spoken for. If a slot opens, you will be contacted immediately."
-            : "Casey will review your submission and respond within 24 hours."}
+        <p className="text-white/50 max-w-md mx-auto">
+          {isWaitlisted
+            ? "All Q2 allocations are currently spoken for. If a slot opens, you'll be contacted immediately."
+            : "Casey will review your request and respond within 24 hours."}
         </p>
       </div>
 
+      {/* Receipt card */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-6 max-w-sm mx-auto text-left space-y-3">
         <div className="flex justify-between">
           <span className="text-sm text-white/40 font-mono">Amount</span>
@@ -73,10 +78,32 @@ export default function BidConfirmation({
         </div>
       </div>
 
-      <p className="text-xs text-white/30 font-mono">
-        A confirmation email has been sent to your address.
-        <br />
-        Save your reference ID: {bidId.slice(0, 8)}
+      {/* What happens next */}
+      {!isWaitlisted && (
+        <div className="max-w-sm mx-auto text-left rounded-lg border border-white/8 bg-white/[0.02] p-5 space-y-3">
+          <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
+            What happens next
+          </p>
+          <div className="space-y-3">
+            {[
+              { time: "Within 24h", text: "Casey reviews your request" },
+              { time: "Within 48h", text: "If accepted: onboarding details + invoice sent" },
+              { time: "Within 7 days", text: "First payment (50%) due upon acceptance" },
+              { time: "April 1", text: "Q2 engagement begins" },
+            ].map(({ time, text }) => (
+              <div key={time} className="flex items-start gap-3">
+                <span className="flex-shrink-0 text-[10px] font-mono text-[#00FFC2]/60 uppercase w-16 pt-0.5">
+                  {time}
+                </span>
+                <span className="text-sm text-white/50">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-white/25 font-mono">
+        Confirmation sent to your email · Reference ID: {bidId.slice(0, 8)}
       </p>
 
       {bidderEmail && (
@@ -84,9 +111,9 @@ export default function BidConfirmation({
           href={`/api/bids/receipt/${bidId}?email=${encodeURIComponent(bidderEmail)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg border border-[#00FFC2]/30 bg-[#00FFC2]/10 px-6 py-3 font-semibold text-[#00FFC2] text-sm transition-opacity hover:opacity-80"
+          className="inline-block rounded-lg border border-[#00FFC2]/30 bg-[#00FFC2]/10 px-6 py-3 min-h-[48px] font-semibold text-[#00FFC2] text-sm transition-opacity hover:opacity-80 active:scale-[0.98]"
         >
-          Download Signed Contract (PDF)
+          Download Signed Agreement (PDF)
         </a>
       )}
     </div>

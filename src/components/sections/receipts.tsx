@@ -9,7 +9,7 @@ const TIMELINE = [
   { date: "Q1 2026", event: "DWTB?! Studios launched" },
   { date: "Q1 2026", event: "Brush Pass data acquired" },
   { date: "Q1 2026", event: "Machine live" },
-  { date: "April 2026", event: "Private bid window open" },
+  { date: "April 2026", event: "Q2 offering open" },
 ];
 
 interface StatsData {
@@ -45,25 +45,31 @@ export function Receipts() {
     <section
       id="receipts"
       ref={ref as React.RefObject<HTMLElement>}
-      className={`py-24 md:py-32 px-6 transition-opacity duration-700 ${isInView ? "opacity-100" : "opacity-0"}`}
+      className={`py-24 md:py-32 px-6 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
     >
       <div className="max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-5xl font-bold mb-12">Proof.</h2>
+        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-12 tracking-tight">Proof.</h2>
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-16">
           <StatCard
             end={stats.proposalsSent}
             label="Proposals Sent"
+            index={0}
+            animate={isInView}
           />
           <StatCard
             end={stats.totalViews}
             label="Total Views"
+            index={1}
+            animate={isInView}
           />
           <StatCard
             end={stats.viewRate}
             suffix="%"
             label="View Rate"
+            index={2}
+            animate={isInView}
           />
           <StatCard
             end={stats.pipelineValue}
@@ -72,11 +78,15 @@ export function Receipts() {
             formatFn={(n) =>
               n >= 1000 ? `${(n / 1000).toFixed(0)}K` : n.toString()
             }
+            index={3}
+            animate={isInView}
           />
           <StatCard
             end={stats.strikeNow}
-            label="STRIKE_NOW"
+            label="Active Pipeline"
             className="col-span-2 md:col-span-1"
+            index={4}
+            animate={isInView}
           />
         </div>
 
@@ -130,6 +140,8 @@ function StatCard({
   label,
   className = "",
   formatFn,
+  index = 0,
+  animate = false,
 }: {
   end: number;
   prefix?: string;
@@ -137,10 +149,15 @@ function StatCard({
   label: string;
   className?: string;
   formatFn?: (n: number) => string;
+  index?: number;
+  animate?: boolean;
 }) {
   return (
     <div
-      className={`bg-surface-raised border border-border rounded-lg p-4 md:p-5 text-center ${className}`}
+      className={`bg-surface-raised/80 backdrop-blur-sm border border-border/50 rounded-lg p-4 md:p-5 text-center transition-all duration-500 ease-out ${
+        animate ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+      } ${className}`}
+      style={{ transitionDelay: `${index * 100}ms` }}
     >
       <AnimatedCounter
         end={end}

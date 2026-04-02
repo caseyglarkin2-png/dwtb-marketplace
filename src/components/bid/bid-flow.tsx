@@ -202,7 +202,7 @@ export default function BidFlow({
         } else if (res.status === 429) {
           setSubmitError("Too many attempts. Please wait a moment and try again.");
         } else if (res.status === 403) {
-          setSubmitError("The bid window has closed. Submissions are no longer accepted.");
+          setSubmitError("The offering period has closed. Requests are no longer accepted.");
         } else {
           setSubmitError(
             data.message || data.error || "Submission failed. Try again."
@@ -256,151 +256,199 @@ export default function BidFlow({
   }
 
   return (
-    <div className="space-y-8">
-      {/* Step indicator */}
-      <nav aria-label={`Bid submission step ${step} of 4`} className="flex items-center justify-center gap-2">
-        {[1, 2, 3, 4].map((s) => (
-          <div key={s} className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full transition-colors ${
-                s === step
-                  ? "bg-[#00FFC2]"
-                  : s < step
-                  ? "bg-[#00FFC2]/40"
-                  : "bg-white/10"
-              }`}
-            />
-            {s < 4 && <div className="w-8 h-px bg-white/10" />}
+    <>
+      {/* Focus mode overlay — dims the page when user is in the deal room */}
+      {step >= 2 && step < 5 && (
+        <div className="fixed inset-0 bg-black/30 z-30 pointer-events-none animate-[fadeIn_0.3s_ease-out]" />
+      )}
+
+      <div className={`space-y-8 relative ${step >= 2 && step < 5 ? "z-35" : ""}`}>
+        {/* Step label */}
+        <div className="text-center">
+          <span className="font-mono text-xs text-accent tracking-widest">
+            STEP {step} OF 4
+          </span>
+        </div>
+
+        {/* Step indicator */}
+      <nav aria-label={`Step ${step} of 4`} className="flex items-center justify-center gap-2">
+        {[
+          { n: 1, label: "Offering" },
+          { n: 2, label: "Details" },
+          { n: 3, label: "Agreement" },
+          { n: 4, label: "Confirm" },
+        ].map(({ n, label }) => (
+          <div key={n} className="flex items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`h-2.5 w-2.5 rounded-full transition-all ${
+                  n === step
+                    ? "bg-[#00FFC2] ring-2 ring-[#00FFC2]/30"
+                    : n < step
+                    ? "bg-[#00FFC2]/50"
+                    : "bg-white/10"
+                }`}
+              />
+              <span className={`text-[10px] font-mono tracking-wider transition-colors ${
+                n === step ? "text-[#00FFC2]" : "text-white/25"
+              }`}>
+                {label}
+              </span>
+            </div>
+            {n < 4 && <div className="w-8 h-px bg-white/10 mb-4" />}
           </div>
         ))}
       </nav>
 
-      {/* Step 1: Review Offer */}
+      {/* Step 1: Review Offering */}
       {step === 1 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-bold text-white">Review the Offer</h3>
+          <div>
+            <h3 className="text-xl font-bold text-white">The Offering</h3>
+            <p className="text-sm text-white/40 mt-1">
+              Q2 2026 GTM Engine — review the terms, then request your allocation.
+            </p>
+          </div>
 
-          <div className="rounded-lg border border-white/10 bg-white/5 p-6 space-y-3">
+          <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm p-6 space-y-4">
             <div className="flex justify-between text-sm">
-              <span className="text-white/50">What you get</span>
+              <span className="text-white/50">Engagement</span>
               <span className="text-white">
-                DWTB?! Studios GTM engine — Q2 2026
+                Full GTM Engine — Q2 2026
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-white/50">Slots remaining</span>
-              <span className="text-[#00FFC2] font-mono">
+              <span className="text-white/50">Allocations remaining</span>
+              <span className="text-[#00FFC2] font-mono font-semibold">
                 {remainingSlots} of 3
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-white/50">Minimum bid</span>
+              <span className="text-white/50">Floor price</span>
               <span className="text-white font-mono">
                 ${minBid.toLocaleString()}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-white/50">Increment</span>
-              <span className="text-white font-mono">
-                ${minIncrement.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-white/50">Deadline</span>
+              <span className="text-white/50">Offering closes</span>
               <span className="text-white font-mono">{deadlineFormatted}</span>
             </div>
           </div>
 
-          <p className="text-sm text-white/50">
-            Includes: account research, signal monitoring, asset production,
-            campaign direction, and performance tracking for the full Q2 term.
-          </p>
+          <div className="rounded-lg border border-white/8 bg-white/[0.02] p-4">
+            <p className="text-xs text-white/50 font-mono uppercase tracking-wider mb-2">
+              What&apos;s included
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                "Signal research & monitoring",
+                "Target account identification",
+                "Custom asset production",
+                "Campaign deployment strategy",
+                "Performance tracking & attribution",
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm text-white/60">
+                  <span className="text-[#00FFC2] text-xs">✓</span>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
 
           <button
             onClick={() => setStep(2)}
-            className="w-full rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.98]"
+            className="w-full rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-all duration-300 hover:opacity-90 active:scale-[0.98] hover:shadow-[0_0_30px_rgba(0,255,194,0.2)]"
           >
-            Continue to Bid Entry
+            Request Allocation →
           </button>
         </div>
       )}
 
-      {/* Step 2: Enter Bid */}
+      {/* Step 2: Your Details + Amount */}
       {step === 2 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-bold text-white">Enter Your Bid</h3>
+          <div>
+            <h3 className="text-xl font-bold text-white">Your Details</h3>
+            <p className="text-sm text-white/40 mt-1">
+              Takes about 60 seconds. Your draft auto-saves.
+            </p>
+          </div>
 
           <div className="space-y-4">
-            <div>
-              <label htmlFor="bidder-name" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
-                Your Name
-              </label>
-              <input
-                id="bidder-name"
-                type="text"
-                value={bidder.name}
-                onChange={(e) => updateBidder("name", e.target.value)}
-                aria-required="true"
-                autoComplete="name"
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
-                placeholder="Casey Glarkin"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="bidder-name" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+                  Name
+                </label>
+                <input
+                  id="bidder-name"
+                  type="text"
+                  value={bidder.name}
+                  onChange={(e) => updateBidder("name", e.target.value)}
+                  aria-required="true"
+                  autoComplete="name"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  placeholder="Jane Smith"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="bidder-title" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+                  Title
+                </label>
+                <input
+                  id="bidder-title"
+                  type="text"
+                  value={bidder.title}
+                  onChange={(e) => updateBidder("title", e.target.value)}
+                  aria-required="true"
+                  autoComplete="organization-title"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  placeholder="VP of Marketing"
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="bidder-title" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
-                Title
-              </label>
-              <input
-                id="bidder-title"
-                type="text"
-                value={bidder.title}
-                onChange={(e) => updateBidder("title", e.target.value)}
-                aria-required="true"
-                autoComplete="organization-title"
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
-                placeholder="VP of Marketing"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="bidder-company" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+                  Company
+                </label>
+                <input
+                  id="bidder-company"
+                  type="text"
+                  value={bidder.company}
+                  onChange={(e) => updateBidder("company", e.target.value)}
+                  aria-required="true"
+                  autoComplete="organization"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  placeholder="Acme Freight"
+                />
+              </div>
 
-            <div>
-              <label htmlFor="bidder-company" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
-                Company
-              </label>
-              <input
-                id="bidder-company"
-                type="text"
-                value={bidder.company}
-                onChange={(e) => updateBidder("company", e.target.value)}
-                aria-required="true"
-                autoComplete="organization"
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
-                placeholder="Acme Freight"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="bidder-email" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
-                Email
-              </label>
-              <input
-                id="bidder-email"
-                type="email"
-                value={bidder.email}
-                onChange={(e) => updateBidder("email", e.target.value)}
-                aria-required="true"
-                autoComplete="email"
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
-                placeholder="you@company.com"
-              />
+              <div>
+                <label htmlFor="bidder-email" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
+                  Email
+                </label>
+                <input
+                  id="bidder-email"
+                  type="email"
+                  value={bidder.email}
+                  onChange={(e) => updateBidder("email", e.target.value)}
+                  aria-required="true"
+                  autoComplete="email"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  placeholder="you@company.com"
+                />
+              </div>
             </div>
 
             <div>
               <label htmlFor="bid-amount" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
-                Bid Amount (USD)
+                Your Amount (USD)
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 font-mono">
                   $
                 </span>
                 <input
@@ -413,28 +461,31 @@ export default function BidFlow({
                   min={minBid}
                   step={minIncrement}
                   aria-required="true"
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 pl-8 text-white font-mono placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 pl-8 text-white text-lg font-mono placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2]"
                 />
               </div>
+              <p className="mt-1 text-xs text-white/30 font-mono">
+                Floor: ${minBid.toLocaleString()} · 50% on acceptance, 50% at midpoint
+              </p>
               {bidder.amount > 0 && bidder.amount < minBid && (
                 <p className="mt-1 text-sm text-red-400">
-                  Minimum bid is ${minBid.toLocaleString()}
+                  Floor price is ${minBid.toLocaleString()}
                 </p>
               )}
             </div>
 
             <div>
               <label htmlFor="bid-note" className="block text-sm text-white/60 font-mono uppercase tracking-wider mb-1">
-                Note (optional)
+                Note to Casey <span className="text-white/30">(optional)</span>
               </label>
               <textarea
                 id="bid-note"
                 value={bidder.note}
                 onChange={(e) => updateBidder("note", e.target.value)}
-                rows={3}
+                rows={2}
                 maxLength={2000}
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/20 focus:border-[#00FFC2] focus:outline-none focus:ring-1 focus:ring-[#00FFC2] resize-none"
-                placeholder="Anything Casey should know"
+                placeholder="Context about your goals, timeline, or what you're looking for"
               />
             </div>
           </div>
@@ -451,7 +502,7 @@ export default function BidFlow({
               disabled={!step1Valid || !step2Valid}
               className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
-              Review + Sign Agreement
+              Review Agreement →
             </button>
           </div>
         </div>
@@ -460,9 +511,29 @@ export default function BidFlow({
       {/* Step 3: Review + Sign */}
       {step === 3 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-bold text-white">
-            Review + Sign Agreement
-          </h3>
+          <div>
+            <h3 className="text-xl font-bold text-white">
+              Partnership Agreement
+            </h3>
+            <p className="text-sm text-white/40 mt-1">
+              10 sections, plain language, no legalese. Expand any section to read the full terms.
+            </p>
+          </div>
+
+          {/* Quick summary bar */}
+          <div className="flex flex-wrap gap-3">
+            {[
+              { label: "Term", value: "Q2 2026 (90 days)" },
+              { label: "Amount", value: amountFormatted },
+              { label: "Payment", value: "50/50 split" },
+              { label: "Exit", value: "30 days notice" },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-md bg-white/5 border border-white/8 px-3 py-1.5">
+                <span className="text-[10px] text-white/30 font-mono uppercase tracking-wider">{label}</span>
+                <p className="text-xs text-white/70 font-mono">{value}</p>
+              </div>
+            ))}
+          </div>
 
           <ContractPreview
             params={{
@@ -477,6 +548,13 @@ export default function BidFlow({
               }),
             }}
           />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs text-white/30 font-mono uppercase tracking-wider">Sign below</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
 
           <ConsentCapture
             bidderName={bidder.name}
@@ -496,7 +574,7 @@ export default function BidFlow({
               disabled={!signData}
               className="flex-1 rounded-lg bg-[#00FFC2] px-6 py-3 min-h-[48px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
             >
-              Continue to Confirm
+              Review + Submit →
             </button>
           </div>
         </div>
@@ -505,17 +583,22 @@ export default function BidFlow({
       {/* Step 4: Confirm + Submit */}
       {step === 4 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-bold text-white">Confirm + Submit</h3>
+          <div>
+            <h3 className="text-xl font-bold text-white">Final Review</h3>
+            <p className="text-sm text-white/40 mt-1">
+              Confirm everything looks right, then submit.
+            </p>
+          </div>
 
           <div className="rounded-lg border border-[#00FFC2]/20 bg-[#00FFC2]/5 p-8 text-center space-y-2">
-            <p className="text-sm text-white/50 font-mono uppercase tracking-wider">
-              You are submitting an official bid of
+            <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
+              Allocation request
             </p>
             <p className="text-4xl font-bold text-white font-mono">
               {amountFormatted}
             </p>
             <p className="text-sm text-white/40">
-              This becomes binding if accepted by DWTB?! Studios.
+              Binding if accepted · 50% due on acceptance · 50% May 15
             </p>
           </div>
 
@@ -529,8 +612,7 @@ export default function BidFlow({
                 className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 text-[#00FFC2] focus:ring-[#00FFC2] focus:ring-offset-0"
               />
               <span className="text-sm text-white/70">
-                I confirm this high-value bid of {amountFormatted} is
-                intentional.
+                I confirm this allocation request of {amountFormatted} is intentional.
               </span>
             </label>
           )}
@@ -549,8 +631,29 @@ export default function BidFlow({
               <span className="text-white">{bidder.email}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/40">Bid</span>
+              <span className="text-white/40">Amount</span>
               <span className="text-white font-mono">{amountFormatted}</span>
+            </div>
+          </div>
+
+          {/* What happens next */}
+          <div className="rounded-lg border border-white/8 bg-white/[0.02] p-4 space-y-3">
+            <p className="text-xs text-white/50 font-mono uppercase tracking-wider">
+              After you submit
+            </p>
+            <div className="space-y-2">
+              {[
+                { step: "1", text: "Casey reviews your request within 24 hours" },
+                { step: "2", text: "If accepted, onboarding details within 48 hours" },
+                { step: "3", text: "Engagement begins upon mutual confirmation" },
+              ].map(({ step: s, text }) => (
+                <div key={s} className="flex items-center gap-3 text-sm">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white/8 flex items-center justify-center">
+                    <span className="text-[10px] font-mono text-white/40">{s}</span>
+                  </span>
+                  <span className="text-white/50">{text}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -584,11 +687,12 @@ export default function BidFlow({
             >
               {submitting
                 ? "Submitting..."
-                : "Submit Bid + Signed Agreement"}
+                : "Submit Allocation Request"}
             </button>
           </div>
         </div>
       )}
     </div>
+    </>
   );
 }

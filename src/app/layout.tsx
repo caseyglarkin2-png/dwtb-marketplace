@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DWTB?! Studios | Private Bid Window",
+  title: "DWTB?! Studios | Q2 2026 Offering",
   description:
     "Private bid-and-contract platform for DWTB?! Studios Q2 2026 partnership slots.",
   robots: { index: false, follow: false },

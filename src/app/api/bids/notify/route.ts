@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
-import { appendAuditEntry } from "@/lib/audit";
 
-// POST /api/bids/notify — fire-and-forget email send
-// Called internally after bid submission
+// POST /api/bids/notify — send bid confirmation emails
+// Accepts bid data directly in request body (no DB lookup)
 export async function POST(request: NextRequest) {
   try {
-    const { bid_id } = await request.json();
-    if (!bid_id) {
+    const bid = await request.json();
+    if (!bid?.bidder_email || !bid?.bid_amount) {
       return NextResponse.json(
-        { error: "Missing bid_id" },
+        { error: "Missing bid data" },
         { status: 400 }
       );
-    }
-
-    const supabase = createServiceClient();
-
-    // Fetch bid + contract data
-    const { data: bid } = await supabase
-      .from("bids")
-      .select("*, contracts(*)")
-      .eq("id", bid_id)
-      .single();
-
-    if (!bid) {
-      return NextResponse.json({ error: "Bid not found" }, { status: 404 });
     }
 
     const resendKey = process.env.RESEND_API_KEY;
@@ -48,29 +33,22 @@ export async function POST(request: NextRequest) {
           to: [adminEmail],
           subject: `New Bid: $${Number(bid.bid_amount).toLocaleString()} from ${bid.bidder_company}`,
           text: [
-            `New bid submitted for ${bid.contract_version}`,
+            `New bid submitted for ${bid.contract_version || "Q2-2026"}`,
             ``,
             `Bidder: ${bid.bidder_name}`,
             `Title: ${bid.bidder_title}`,
             `Company: ${bid.bidder_company}`,
             `Email: ${bid.bidder_email}`,
             `Amount: $${Number(bid.bid_amount).toLocaleString()}`,
-            `Status: ${bid.status}`,
             `Note: ${bid.note || "(none)"}`,
             ``,
-            `Bid ID: ${bid.id}`,
-            `Submitted: ${bid.created_at}`,
+            `Bid ID: ${bid.bid_id || "N/A"}`,
+            `Submitted: ${bid.signed_at || new Date().toISOString()}`,
           ].join("\n"),
         }),
       });
     } catch (error) {
-      await appendAuditEntry({
-        eventType: "email_delivery_failed",
-        entityType: "bid",
-        entityId: bid_id,
-        actorEmail: adminEmail,
-        payload: { target: "admin", error: String(error) },
-      });
+      console.error("Admin notification email failed:", error);
     }
 
     // Email to bidder
@@ -91,9 +69,9 @@ export async function POST(request: NextRequest) {
             `Your bid has been received.`,
             ``,
             `Amount: $${Number(bid.bid_amount).toLocaleString()}`,
-            `Reference: ${bid.id}`,
-            `Contract Version: ${bid.contract_version}`,
-            `Submitted: ${bid.created_at}`,
+            `Reference: ${bid.bid_id || "N/A"}`,
+            `Contract Version: ${bid.contract_version || "Q2-2026-v1.0"}`,
+            `Submitted: ${bid.signed_at || new Date().toISOString()}`,
             ``,
             `You will be notified when your bid status changes.`,
             ``,
@@ -101,20 +79,8 @@ export async function POST(request: NextRequest) {
           ].join("\n"),
         }),
       });
-
-      // Mark notification as sent
-      await supabase
-        .from("bids")
-        .update({ notification_sent: true })
-        .eq("id", bid_id);
     } catch (error) {
-      await appendAuditEntry({
-        eventType: "email_delivery_failed",
-        entityType: "bid",
-        entityId: bid_id,
-        actorEmail: bid.bidder_email,
-        payload: { target: "bidder", error: String(error) },
-      });
+      console.error("Bidder confirmation email failed:", error);
     }
 
     return NextResponse.json({ sent: true });

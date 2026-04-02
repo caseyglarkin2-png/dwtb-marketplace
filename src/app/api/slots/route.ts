@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import {
   DEFAULT_TOTAL_SLOTS,
   DEFAULT_ACCEPTED_SLOTS,
@@ -7,45 +6,32 @@ import {
   DEFAULT_MIN_INCREMENT,
   DEADLINE_UTC,
 } from "@/lib/constants";
+import { getLeadStats } from "@/lib/clawd";
 
-// GET /api/slots — public slot state (competitive lockdown: no pending count or bid amounts)
+// GET /api/slots — public slot state (live from Clawd)
 export async function GET() {
   try {
-    const supabase = createServiceClient();
-
-    const { data, error } = await supabase
-      .from("slot_config")
-      .select(
-        "total_slots, accepted_slots, current_min_bid, min_increment, deadline, manually_closed"
-      )
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error || !data) {
-      // Fallback to defaults if no slot_config row exists
-      return NextResponse.json({
-        total_slots: DEFAULT_TOTAL_SLOTS,
-        remaining_slots: DEFAULT_TOTAL_SLOTS - DEFAULT_ACCEPTED_SLOTS,
-        current_min_bid: DEFAULT_MIN_BID,
-        min_increment: DEFAULT_MIN_INCREMENT,
-        deadline: DEADLINE_UTC,
-        manually_closed: false,
-      });
-    }
-
+    const stats = await getLeadStats("dwtb");
+    const accepted = stats.total;
     return NextResponse.json({
-      total_slots: data.total_slots,
-      remaining_slots: data.total_slots - data.accepted_slots,
-      current_min_bid: data.current_min_bid,
-      min_increment: data.min_increment,
-      deadline: data.deadline,
-      manually_closed: data.manually_closed,
+      total_slots: DEFAULT_TOTAL_SLOTS,
+      remaining_slots: Math.max(0, DEFAULT_TOTAL_SLOTS - accepted),
+      current_min_bid: DEFAULT_MIN_BID,
+      min_increment: DEFAULT_MIN_INCREMENT,
+      deadline: DEADLINE_UTC,
+      manually_closed: false,
+      source: "clawd",
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch slot state" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Clawd lead stats fetch failed:", err);
+    return NextResponse.json({
+      total_slots: DEFAULT_TOTAL_SLOTS,
+      remaining_slots: DEFAULT_TOTAL_SLOTS - DEFAULT_ACCEPTED_SLOTS,
+      current_min_bid: DEFAULT_MIN_BID,
+      min_increment: DEFAULT_MIN_INCREMENT,
+      deadline: DEADLINE_UTC,
+      manually_closed: false,
+      source: "fallback",
+    });
   }
 }

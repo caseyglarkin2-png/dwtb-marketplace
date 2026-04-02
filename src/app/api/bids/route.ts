@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { bidSubmissionSchema } from "@/lib/validations";
 import { generateSignatureHash } from "@/lib/crypto";
 import { getContractVersion } from "@/lib/contract-text";
 import { appendAuditEntry } from "@/lib/audit";
 import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
-import { DEADLINE_UTC } from "@/lib/constants";
+import { DEADLINE_UTC, DEFAULT_MIN_BID } from "@/lib/constants";
+import { createLead } from "@/lib/clawd";
 
 const MAX_BID_AMOUNT = Number(process.env.MAX_BID_AMOUNT) || 500000;
 
@@ -18,11 +18,11 @@ function getClientInfo(request: NextRequest) {
   return { ip, ua };
 }
 
-// POST /api/bids — atomic bid + contract submission
+// POST /api/bids — bid + contract submission (email-based record)
 export async function POST(request: NextRequest) {
   const { ip, ua } = getClientInfo(request);
 
-  // Rate limit check (F2)
+  // Rate limit check
   const rlKey = rateLimitKey(ip, ua);
   const { allowed, retryAfter } = await checkRateLimit(rlKey);
   if (!allowed) {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
 
-  // Bid amount sanity check (F21)
+  // Bid amount sanity check
   if (data.bid_amount > MAX_BID_AMOUNT) {
     return NextResponse.json(
       {
@@ -84,7 +84,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Typed name must match bidder name (F14, case-insensitive)
+  // Min bid check
+  if (data.bid_amount < DEFAULT_MIN_BID) {
+    return NextResponse.json(
+      {
+        error: "BELOW_MIN_BID",
+        message: `Bid must be at least $${DEFAULT_MIN_BID.toLocaleString()}.`,
+      },
+      { status: 400 }
+    );
+  }
+
+  // Typed name must match bidder name (case-insensitive)
   if (data.typed_name.toLowerCase() !== data.bidder_name.toLowerCase()) {
     return NextResponse.json(
       {
@@ -95,100 +106,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = createServiceClient();
   const contractVersion = getContractVersion();
   const signedAt = new Date().toISOString();
 
-  // Idempotency check (F3) — return existing bid if key matches
-  const { data: existingBid } = await supabase
-    .from("bids")
-    .select("id, status")
-    .eq("idempotency_key", data.idempotency_key)
-    .maybeSingle();
-
-  if (existingBid) {
-    return NextResponse.json(
-      { bid_id: existingBid.id, status: existingBid.status, duplicate: true },
-      { status: 200 }
-    );
-  }
-
-  // Check for duplicate email per contract version (F9)
-  const { data: duplicateEmail } = await supabase
-    .from("bids")
-    .select("id")
-    .eq("bidder_email", data.bidder_email)
-    .eq("contract_version", contractVersion)
-    .maybeSingle();
-
-  if (duplicateEmail) {
-    return NextResponse.json(
-      {
-        error: "DUPLICATE_BID",
-        message:
-          "A bid from this email already exists for Q2 2026. Contact casey@dwtb.dev to amend.",
+  // Submit to Clawd as a lead
+  let bidId: string;
+  try {
+    const clawdRes = await createLead({
+      name: data.bidder_name,
+      email: data.bidder_email,
+      company: data.bidder_company,
+      source: "dwtb_marketplace",
+      intent: "bid",
+      meta: {
+        bid_amount: data.bid_amount,
+        bidder_title: data.bidder_title,
+        note: data.note,
+        contract_version: contractVersion,
+        signed_at: signedAt,
       },
-      { status: 409 }
-    );
-  }
-
-  // Fetch slot config for min bid validation
-  const { data: slotConfig } = await supabase
-    .from("slot_config")
-    .select("current_min_bid, total_slots, accepted_slots, pending_slots")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const minBid = slotConfig?.current_min_bid ?? 15000;
-  if (data.bid_amount < minBid) {
+    });
+    bidId = clawdRes.lead.id;
+  } catch (err) {
+    console.error("Clawd lead creation failed:", err);
     return NextResponse.json(
-      {
-        error: "BELOW_MIN_BID",
-        message: `Bid must be at least $${minBid.toLocaleString()}.`,
-      },
-      { status: 400 }
+      { error: "SUBMISSION_FAILED", message: "Failed to submit bid. Please try again." },
+      { status: 502 }
     );
   }
 
-  // Determine initial status — waitlist if slots full
-  let bidStatus = "submitted";
-  if (slotConfig) {
-    const totalUsed = slotConfig.accepted_slots + slotConfig.pending_slots;
-    if (totalUsed >= slotConfig.total_slots) {
-      bidStatus = "waitlisted";
-    }
-  }
-
-  // --- ATOMIC: Create bid ---
-  const { data: bid, error: bidError } = await supabase
-    .from("bids")
-    .insert({
-      idempotency_key: data.idempotency_key,
-      bidder_name: data.bidder_name,
-      bidder_title: data.bidder_title,
-      bidder_company: data.bidder_company,
-      bidder_email: data.bidder_email,
-      bid_amount: data.bid_amount,
-      note: data.note ?? null,
-      contract_version: contractVersion,
-      status: bidStatus,
-    })
-    .select("id")
-    .single();
-
-  if (bidError || !bid) {
-    console.error("Bid insert failed:", bidError);
-    return NextResponse.json(
-      { error: "SUBMISSION_FAILED", message: "Failed to submit bid." },
-      { status: 500 }
-    );
-  }
-
-  // Generate integrity hash (F13: contract version pinned server-side)
+  // Generate integrity hash
   const signatureHash = await generateSignatureHash({
     contractVersion,
-    bidId: bid.id,
+    bidId,
     signerName: data.bidder_name,
     signerEmail: data.bidder_email,
     bidAmount: data.bid_amount,
@@ -196,49 +146,11 @@ export async function POST(request: NextRequest) {
     signedAt,
   });
 
-  // --- ATOMIC: Create contract ---
-  const { error: contractError } = await supabase.from("contracts").insert({
-    contract_version: contractVersion,
-    bid_id: bid.id,
-    signer_name: data.bidder_name,
-    signer_title: data.bidder_title,
-    signer_company: data.bidder_company,
-    signer_email: data.bidder_email,
-    typed_name: data.typed_name,
-    consent_given: data.consent_given,
-    signed_at: signedAt,
-    signature_hash: signatureHash,
-    signature_data: data.signature_data,
-    ip_address: ip,
-    user_agent: ua,
-  });
-
-  if (contractError) {
-    // Rollback bid if contract creation fails
-    await supabase.from("bids").delete().eq("id", bid.id);
-    console.error("Contract insert failed:", contractError);
-    return NextResponse.json(
-      { error: "SUBMISSION_FAILED", message: "Failed to record contract." },
-      { status: 500 }
-    );
-  }
-
-  // Update pending_slots
-  if (slotConfig && bidStatus === "submitted") {
-    await supabase
-      .from("slot_config")
-      .update({ pending_slots: slotConfig.pending_slots + 1 })
-      .eq("id", slotConfig.total_slots) // will use correct id below
-      .single();
-    // Note: slot_config update uses the config ID — in practice, use the actual row id.
-    // For MVP with single row, this is handled by ordering.
-  }
-
-  // Audit trail entry
+  // Audit trail
   await appendAuditEntry({
     eventType: "bid_submitted",
     entityType: "bid",
-    entityId: bid.id,
+    entityId: bidId,
     actorEmail: data.bidder_email,
     actorIp: ip,
     actorUa: ua,
@@ -246,14 +158,15 @@ export async function POST(request: NextRequest) {
       bid_amount: data.bid_amount,
       contract_version: contractVersion,
       signature_hash: signatureHash,
-      status: bidStatus,
+      bidder_name: data.bidder_name,
+      bidder_company: data.bidder_company,
     },
   });
 
   await appendAuditEntry({
     eventType: "contract_signed",
     entityType: "contract",
-    entityId: bid.id,
+    entityId: bidId,
     actorEmail: data.bidder_email,
     actorIp: ip,
     actorUa: ua,
@@ -264,29 +177,110 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Fire-and-forget: trigger email notification
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    fetch(`${baseUrl}/api/bids/notify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bid_id: bid.id }),
-    }).catch(() => {
-      // Email is fire-and-forget — don't let it block or fail the submission
-    });
-  } catch {
-    // Silently handle
-  }
+  // Send emails inline (fire-and-forget)
+  sendBidEmails({
+    bidId,
+    bidderName: data.bidder_name,
+    bidderTitle: data.bidder_title,
+    bidderCompany: data.bidder_company,
+    bidderEmail: data.bidder_email,
+    bidAmount: data.bid_amount,
+    note: data.note,
+    contractVersion,
+    signedAt,
+  }).catch(console.error);
 
   return NextResponse.json(
     {
-      bid_id: bid.id,
-      status: bidStatus,
+      bid_id: bidId,
+      status: "submitted",
       signature_hash: signatureHash,
       contract_version: contractVersion,
       signed_at: signedAt,
     },
     { status: 201 }
   );
+}
+
+async function sendBidEmails(bid: {
+  bidId: string;
+  bidderName: string;
+  bidderTitle: string;
+  bidderCompany: string;
+  bidderEmail: string;
+  bidAmount: number;
+  note?: string;
+  contractVersion: string;
+  signedAt: string;
+}) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    console.warn("RESEND_API_KEY not configured — skipping email");
+    return;
+  }
+
+  const adminEmail = process.env.ADMIN_EMAIL || "casey@dwtb.dev";
+
+  // Email to Casey
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "DWTB?! Studios <bids@dwtb.dev>",
+        to: [adminEmail],
+        subject: `New Bid: $${bid.bidAmount.toLocaleString()} from ${bid.bidderCompany}`,
+        text: [
+          `New bid submitted for ${bid.contractVersion}`,
+          ``,
+          `Bidder: ${bid.bidderName}`,
+          `Title: ${bid.bidderTitle}`,
+          `Company: ${bid.bidderCompany}`,
+          `Email: ${bid.bidderEmail}`,
+          `Amount: $${bid.bidAmount.toLocaleString()}`,
+          `Note: ${bid.note || "(none)"}`,
+          ``,
+          `Bid ID: ${bid.bidId}`,
+          `Submitted: ${bid.signedAt}`,
+        ].join("\n"),
+      }),
+    });
+  } catch (error) {
+    console.error("Admin notification email failed:", error);
+  }
+
+  // Email to bidder
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "DWTB?! Studios <bids@dwtb.dev>",
+        to: [bid.bidderEmail],
+        subject: `Bid Confirmation — DWTB?! Studios Q2 2026`,
+        text: [
+          `${bid.bidderName},`,
+          ``,
+          `Your bid has been received.`,
+          ``,
+          `Amount: $${bid.bidAmount.toLocaleString()}`,
+          `Reference: ${bid.bidId}`,
+          `Contract Version: ${bid.contractVersion}`,
+          `Submitted: ${bid.signedAt}`,
+          ``,
+          `You will be notified when your bid status changes.`,
+          ``,
+          `— Casey Glarkin, DWTB?! Studios`,
+        ].join("\n"),
+      }),
+    });
+  } catch (error) {
+    console.error("Bidder confirmation email failed:", error);
+  }
 }

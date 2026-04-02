@@ -1,27 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
+import { getPipeline } from "@/lib/clawd";
 
-// GET /api/admin/bids — list all bids (admin only)
+// GET /api/admin/bids — list all deals from Clawd pipeline (admin only)
 export async function GET(request: NextRequest) {
   const isAdmin = await validateAdminRequest(request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
-
-  const { data, error } = await supabase
-    .from("bids")
-    .select("*, contracts(*)")
-    .order("created_at", { ascending: false });
-
-  if (error) {
+  try {
+    const pipeline = await getPipeline();
+    const bids = pipeline.deals.map((d) => ({
+      id: d.deal_id,
+      bidder_name: d.contact_name,
+      bidder_email: d.contact_email,
+      bidder_company: d.company,
+      bid_amount: d.deal_value,
+      status: d.stage,
+      source: d.source,
+      audit_score: d.audit_score,
+      classification: d.classification,
+      created_at: d.created_at,
+      updated_at: d.updated_at,
+    }));
+    return NextResponse.json({ bids });
+  } catch (err) {
+    console.error("Clawd pipeline fetch failed:", err);
     return NextResponse.json(
-      { error: "Failed to fetch bids" },
-      { status: 500 }
+      { error: "Failed to fetch bids from pipeline" },
+      { status: 502 }
     );
   }
-
-  return NextResponse.json({ bids: data });
 }

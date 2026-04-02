@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { getLeadById, extractBidRecord } from "@/lib/clawd";
 
 // GET /api/bids/status?ref=<bid_id>&email=<bidder_email> — public bid status check
 export async function GET(request: NextRequest) {
@@ -14,39 +14,35 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supabase = createServiceClient();
+  try {
+    const lead = await getLeadById(ref);
 
-  const { data: bid, error } = await supabase
-    .from("bids")
-    .select(
-      "id, status, bid_amount, bidder_company, contract_version, created_at"
-    )
-    .eq("id", ref)
-    .eq("bidder_email", email)
-    .maybeSingle();
+    // Verify email matches (prevent enumeration)
+    if (lead.email.toLowerCase() !== email.toLowerCase()) {
+      return NextResponse.json(
+        { error: "No bid found for this reference and email" },
+        { status: 404 }
+      );
+    }
 
-  if (error || !bid) {
+    const bid = extractBidRecord(lead);
+
+    return NextResponse.json({
+      bid_id: bid.bid_id,
+      status: bid.status,
+      company: bid.bidder_company,
+      bid_amount: bid.bid_amount,
+      contract_version: bid.contract_version,
+      submitted_at: bid.submitted_at,
+      signed_at: bid.signed_at,
+      accepted_at: bid.accepted_at || null,
+      paid_at: bid.paid_at || null,
+      receipt_url: `/api/bids/receipt/${bid.bid_id}`,
+    });
+  } catch {
     return NextResponse.json(
-      { error: "Bid not found" },
+      { error: "No bid found for this reference and email" },
       { status: 404 }
     );
   }
-
-  // Fetch contract receipt URL if available
-  const { data: contract } = await supabase
-    .from("contracts")
-    .select("receipt_url, signed_at")
-    .eq("bid_id", bid.id)
-    .maybeSingle();
-
-  return NextResponse.json({
-    bid_id: bid.id,
-    status: bid.status,
-    bid_amount: bid.bid_amount,
-    company: bid.bidder_company,
-    contract_version: bid.contract_version,
-    submitted_at: bid.created_at,
-    signed_at: contract?.signed_at || null,
-    receipt_url: contract?.receipt_url || null,
-  });
 }

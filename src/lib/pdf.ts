@@ -25,6 +25,85 @@ function wrapText(text: string, maxChars: number): string[] {
   return lines;
 }
 
+// ── Payment Instructions PDF ────────────────────────────
+
+interface PaymentInstructionsParams {
+  bidderName: string;
+  bidderCompany: string;
+  bidAmount: number;
+  bidId: string;
+  contractVersion: string;
+  acceptedAt: string;
+}
+
+export function generatePaymentInstructionsPdf(
+  params: PaymentInstructionsParams
+): Uint8Array {
+  const halfAmount = Math.round(params.bidAmount / 2);
+  const formattedTotal = params.bidAmount.toLocaleString("en-US");
+  const formattedHalf = halfAmount.toLocaleString("en-US");
+
+  const text = [
+    "DWTB?! STUDIOS — PAYMENT INSTRUCTIONS",
+    "Q2 2026 GTM Engine Partnership",
+    "",
+    "────────────────────────────────────────────",
+    "",
+    `Prepared for: ${params.bidderName}`,
+    `Company: ${params.bidderCompany}`,
+    `Allocation Amount: $${formattedTotal}`,
+    `Reference: ${params.bidId}`,
+    `Contract: ${params.contractVersion}`,
+    `Accepted: ${new Date(params.acceptedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`,
+    "",
+    "────────────────────────────────────────────",
+    "",
+    "PAYMENT SCHEDULE",
+    "",
+    `  Installment 1:  $${formattedHalf}  —  Due within 7 business days`,
+    `  Installment 2:  $${formattedHalf}  —  Due by May 15, 2026`,
+    "",
+    "────────────────────────────────────────────",
+    "",
+    "ACCEPTED PAYMENT METHODS",
+    "",
+    "1. ZELLE (Preferred — instant, no fees)",
+    "   Send to: casey@dwtb.dev",
+    "   Name: Casey Glarkin / DWTB Studios LLC",
+    "",
+    "2. VENMO",
+    "   @CaseyGlarkin",
+    "   Note: Include your bid reference number",
+    "",
+    "3. WIRE TRANSFER / ACH",
+    "   Bank: [Provided upon request]",
+    "   Routing: [Provided upon request]",
+    "   Account: [Provided upon request]",
+    "   Reference: " + params.bidId,
+    "",
+    "   For wire details, email casey@dwtb.dev",
+    "   or reply to this email.",
+    "",
+    "────────────────────────────────────────────",
+    "",
+    "IMPORTANT NOTES",
+    "",
+    "- Please include your bid reference in all payments",
+    "- Confirmation will be sent within 24 hours of receipt",
+    "- Questions? casey@dwtb.dev",
+    "",
+    "────────────────────────────────────────────",
+    "",
+    "DWTB?! Studios LLC",
+    "casey@dwtb.dev",
+    `Reference: ${params.bidId}`,
+  ].join("\n");
+
+  return buildSimplePdf(text);
+}
+
+// ── Contract PDF ────────────────────────────────────────
+
 interface PdfParams {
   contractText: string;
   bidderName: string;
@@ -48,6 +127,29 @@ export function generateContractPdf(params: PdfParams): Uint8Array {
     contractVersion,
   } = params;
 
+  const sigBlock = [
+    "",
+    "────────────────────────────────────────────",
+    "",
+    `Electronically Signed By: ${bidderName}`,
+    `Company: ${bidderCompany}`,
+    `Bid Amount: $${bidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+    `Date: ${new Date(signedAt).toLocaleString("en-US", { timeZone: "America/New_York" })}`,
+    `Bid Reference: ${bidId}`,
+    `Contract Version: ${contractVersion}`,
+    `Integrity Hash: ${signatureHash}`,
+    "",
+    "This document was electronically signed in accordance with the",
+    "Electronic Signatures in Global and National Commerce Act (ESIGN Act).",
+  ].join("\n");
+
+  return buildSimplePdf(contractText + sigBlock);
+}
+
+// ── Shared PDF Builder ──────────────────────────────────
+
+function buildSimplePdf(text: string): Uint8Array {
+
   const fontSize = 10;
   const lineHeight = 14;
   const marginLeft = 50;
@@ -57,8 +159,8 @@ export function generateContractPdf(params: PdfParams): Uint8Array {
   const maxCharsPerLine = 85;
   const maxLinesPerPage = Math.floor((marginTop - 60) / lineHeight);
 
-  // Split contract text into lines
-  const rawLines = contractText.split("\n");
+  // Split text into lines
+  const rawLines = text.split("\n");
   const allLines: string[] = [];
 
   for (const line of rawLines) {
@@ -68,27 +170,6 @@ export function generateContractPdf(params: PdfParams): Uint8Array {
       allLines.push(...wrapText(line, maxCharsPerLine));
     }
   }
-
-  // Add signature block
-  allLines.push("");
-  allLines.push("────────────────────────────────────────────");
-  allLines.push("");
-  allLines.push(`Electronically Signed By: ${bidderName}`);
-  allLines.push(`Company: ${bidderCompany}`);
-  allLines.push(
-    `Bid Amount: $${bidAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-  );
-  allLines.push(`Date: ${new Date(signedAt).toLocaleString("en-US", { timeZone: "America/New_York" })}`);
-  allLines.push(`Bid Reference: ${bidId}`);
-  allLines.push(`Contract Version: ${contractVersion}`);
-  allLines.push(`Integrity Hash: ${signatureHash}`);
-  allLines.push("");
-  allLines.push(
-    "This document was electronically signed in accordance with the"
-  );
-  allLines.push(
-    "Electronic Signatures in Global and National Commerce Act (ESIGN Act)."
-  );
 
   // Split into pages
   const pages: string[][] = [];

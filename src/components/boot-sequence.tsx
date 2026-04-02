@@ -4,20 +4,20 @@ import { useState, useEffect, useCallback } from "react";
 import { FALLBACK_STATS } from "@/lib/constants";
 
 const BOOT_LINES = [
-  { text: "DWTB?! STUDIOS // LIVE", delay: 0 },
-  { text: "PRIVATE BID WINDOW ACTIVE", delay: 400 },
-  { text: "2 Q2 SLOTS REMAINING", delay: 800 },
-  { text: "CONTRACT ENGINE READY", delay: 1200 },
+  { text: "DWTB?! STUDIOS // Q2 2026", delay: 0 },
+  { text: "OFFERING PERIOD OPEN", delay: 400 },
+  { text: "2 OF 3 ALLOCATIONS REMAINING", delay: 800 },
+  { text: "CONTRACT ENGINE INITIALIZED", delay: 1200 },
   {
-    text: `[${FALLBACK_STATS.proposalsSent} proposals sent · $${(FALLBACK_STATS.pipelineValue / 1000).toFixed(0)}K pipeline · ${FALLBACK_STATS.strikeNow} active prospects]`,
+    text: `[108 generated · ${FALLBACK_STATS.proposalsSent} shipped · $${(FALLBACK_STATS.pipelineValue / 1000).toFixed(0)}K pipeline · ${FALLBACK_STATS.strikeNow} in motion]`,
     delay: 1600,
   },
   { text: "READY_", delay: 2200 },
 ];
 
 const EXPIRED_BOOT_LINES = [
-  { text: "DWTB?! STUDIOS // LIVE", delay: 0 },
-  { text: "BID WINDOW CLOSED", delay: 400 },
+  { text: "DWTB?! STUDIOS // Q2 2026", delay: 0 },
+  { text: "OFFERING CLOSED", delay: 400 },
   { text: "Q2 AT CAPACITY", delay: 800 },
   { text: "DWTB STUDIOS OPERATIONAL", delay: 1200 },
   { text: "READY_", delay: 1600 },

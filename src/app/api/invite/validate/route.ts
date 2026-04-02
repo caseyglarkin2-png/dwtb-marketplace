@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { appendAuditEntry } from "@/lib/audit";
 
 // POST /api/invite/validate — validate an invite token
+// Without a database, all valid-format tokens are accepted (gate is REQUIRE_INVITE_TOKEN env var)
 export async function POST(request: NextRequest) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -43,81 +43,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
-
-  const { data: token, error } = await supabase
-    .from("invite_tokens")
-    .select("*")
-    .eq("code", code)
-    .maybeSingle();
-
-  if (error || !token) {
-    return NextResponse.json(
-      { valid: false, error: "Token not found" },
-      { status: 404 }
-    );
-  }
-
-  // Check status
-  if (token.status !== "active") {
-    return NextResponse.json(
-      { valid: false, error: `Token is ${token.status}` },
-      { status: 403 }
-    );
-  }
-
-  // Check expiry
-  if (new Date(token.expires_at) < new Date()) {
-    // Mark as expired
-    await supabase
-      .from("invite_tokens")
-      .update({ status: "expired", updated_at: new Date().toISOString() })
-      .eq("id", token.id);
-
-    return NextResponse.json(
-      { valid: false, error: "Token has expired" },
-      { status: 403 }
-    );
-  }
-
-  // Check max uses
-  if (token.used_count >= token.max_uses) {
-    await supabase
-      .from("invite_tokens")
-      .update({ status: "used", updated_at: new Date().toISOString() })
-      .eq("id", token.id);
-
-    return NextResponse.json(
-      { valid: false, error: "Token has been fully used" },
-      { status: 403 }
-    );
-  }
-
-  // Increment usage count
-  await supabase
-    .from("invite_tokens")
-    .update({
-      used_count: token.used_count + 1,
-      status: token.used_count + 1 >= token.max_uses ? "used" : "active",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", token.id);
-
   await appendAuditEntry({
     eventType: "invite_used",
     entityType: "invite_token",
-    entityId: token.id,
+    entityId: code,
     actorIp: ip,
     actorUa: ua,
-    payload: {
-      code: code.slice(0, 4) + "****",
-      access_mode: token.access_mode,
-    },
+    payload: { code: code.slice(0, 4) + "****", access_mode: "private" },
   });
 
   return NextResponse.json({
     valid: true,
-    access_mode: token.access_mode,
-    invitee_email: token.invitee_email,
+    access_mode: "private",
+    invitee_email: null,
   });
 }

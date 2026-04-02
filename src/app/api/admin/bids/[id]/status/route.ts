@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
 import { appendAuditEntry } from "@/lib/audit";
+import {
+  getLeadById,
+  updateLeadMeta,
+  updateLeadStatus,
+  extractBidRecord,
+} from "@/lib/clawd";
+import { renderContractText } from "@/lib/contract-text";
+import {
+  generateContractPdf,
+  generatePaymentInstructionsPdf,
+} from "@/lib/pdf";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  submitted: ["pending_review", "accepted", "declined", "waitlisted"],
-  pending_review: ["accepted", "declined", "waitlisted"],
+  submitted: ["accepted", "declined", "waitlisted"],
   waitlisted: ["accepted", "declined"],
-  accepted: ["declined"],
+  accepted: ["paid", "declined"],
+  paid: ["onboarded"],
   declined: [],
 };
 
 // PATCH /api/admin/bids/[id]/status — admin status transition
+// On "accepted": emails bidder with signed contract PDF + payment instructions PDF
+// On "paid": Casey manually marks payment received
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,18 +47,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Status required" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
-
-  // Fetch current bid
-  const { data: bid, error: fetchError } = await supabase
-    .from("bids")
-    .select("id, status, bidder_email, bidder_name, bidder_company, bid_amount, contract_version")
-    .eq("id", bidId)
-    .single();
-
-  if (fetchError || !bid) {
+  // Fetch current bid from Clawd
+  let lead;
+  try {
+    lead = await getLeadById(bidId);
+  } catch {
     return NextResponse.json({ error: "Bid not found" }, { status: 404 });
   }
+
+  const bid = extractBidRecord(lead);
 
   // Validate transition
   const allowedNext = VALID_TRANSITIONS[bid.status];
@@ -60,116 +69,34 @@ export async function PATCH(
     );
   }
 
-  // If accepting: check slot availability
+  const now = new Date().toISOString();
+  const metaUpdate: Record<string, unknown> = {
+    bid_status: newStatus,
+  };
+
   if (newStatus === "accepted") {
-    const { data: slotConfig } = await supabase
-      .from("slot_config")
-      .select("total_slots, accepted_slots")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (slotConfig && slotConfig.accepted_slots >= slotConfig.total_slots) {
-      return NextResponse.json(
-        {
-          error: "SLOTS_FULL",
-          message: "All slots are filled. Cannot accept more bids.",
-        },
-        { status: 409 }
-      );
-    }
-
-    // Increment accepted_slots
-    if (slotConfig) {
-      await supabase
-        .from("slot_config")
-        .update({
-          accepted_slots: slotConfig.accepted_slots + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("total_slots", slotConfig.total_slots); // match the row
-    }
+    metaUpdate.accepted_at = now;
   }
 
-  // If previously accepted and now declining: decrement accepted_slots
-  if (bid.status === "accepted" && newStatus === "declined") {
-    const { data: slotConfig } = await supabase
-      .from("slot_config")
-      .select("accepted_slots")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (slotConfig && slotConfig.accepted_slots > 0) {
-      await supabase
-        .from("slot_config")
-        .update({
-          accepted_slots: slotConfig.accepted_slots - 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("accepted_slots", slotConfig.accepted_slots);
-    }
+  if (newStatus === "paid") {
+    metaUpdate.paid_at = now;
   }
 
-  // Update bid status
-  const { error: updateError } = await supabase
-    .from("bids")
-    .update({ status: newStatus, updated_at: new Date().toISOString() })
-    .eq("id", bidId);
-
-  if (updateError) {
-    return NextResponse.json(
-      { error: "Failed to update status" },
-      { status: 500 }
-    );
-  }
-
-  // Update pending_slots count
-  if (newStatus === "pending_review") {
-    // Increment pending
-    const { data: sc } = await supabase
-      .from("slot_config")
-      .select("pending_slots")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (sc) {
-      await supabase
-        .from("slot_config")
-        .update({ pending_slots: sc.pending_slots + 1 })
-        .eq("pending_slots", sc.pending_slots);
-    }
-  } else if (bid.status === "pending_review") {
-    // Decrement pending if moving away from pending_review
-    const { data: sc } = await supabase
-      .from("slot_config")
-      .select("pending_slots")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (sc && sc.pending_slots > 0) {
-      await supabase
-        .from("slot_config")
-        .update({ pending_slots: sc.pending_slots - 1 })
-        .eq("pending_slots", sc.pending_slots);
-    }
-  }
+  // Persist status update to Clawd
+  await updateLeadMeta(bidId, metaUpdate);
+  await updateLeadStatus(bidId, newStatus);
 
   // Audit trail
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  await appendAuditEntry({
-    eventType:
-      newStatus === "accepted"
-        ? "bid_accepted"
-        : newStatus === "declined"
+  appendAuditEntry({
+    eventType: newStatus === "accepted"
+      ? "bid_accepted"
+      : newStatus === "declined"
         ? "bid_declined"
-        : newStatus === "waitlisted"
-        ? "bid_waitlisted"
-        : "bid_submitted",
+        : newStatus === "paid"
+          ? "bid_accepted"
+          : "bid_waitlisted",
     entityType: "bid",
     entityId: bidId,
-    actorIp: ip,
     payload: {
       previous_status: bid.status,
       new_status: newStatus,
@@ -177,7 +104,11 @@ export async function PATCH(
   });
 
   // Send status change email to bidder (fire-and-forget)
-  sendStatusEmail(bid, newStatus).catch(console.error);
+  if (newStatus === "accepted") {
+    sendAcceptanceEmail(bid, now).catch(console.error);
+  } else {
+    sendStatusEmail(bid, newStatus).catch(console.error);
+  }
 
   return NextResponse.json({
     bid_id: bidId,
@@ -186,9 +117,119 @@ export async function PATCH(
   });
 }
 
+// On acceptance: email signed contract PDF + payment instructions PDF
+async function sendAcceptanceEmail(
+  bid: {
+    bid_id: string;
+    bidder_email: string;
+    bidder_name: string;
+    bidder_company: string;
+    bidder_title: string;
+    bid_amount: number;
+    contract_version: string;
+    signature_hash: string;
+    signed_at: string;
+  },
+  acceptedAt: string
+) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) return;
+
+  // Generate contract PDF
+  const contractText = renderContractText({
+    bidderName: bid.bidder_name,
+    bidderTitle: bid.bidder_title,
+    bidderCompany: bid.bidder_company,
+    bidAmount: bid.bid_amount,
+    date: new Date(bid.signed_at).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+  });
+
+  const contractPdf = generateContractPdf({
+    contractText,
+    bidderName: bid.bidder_name,
+    bidderCompany: bid.bidder_company,
+    bidAmount: bid.bid_amount,
+    signedAt: bid.signed_at,
+    bidId: bid.bid_id,
+    signatureHash: bid.signature_hash,
+    contractVersion: bid.contract_version,
+  });
+
+  // Generate payment instructions PDF
+  const paymentPdf = generatePaymentInstructionsPdf({
+    bidderName: bid.bidder_name,
+    bidderCompany: bid.bidder_company,
+    bidAmount: bid.bid_amount,
+    bidId: bid.bid_id,
+    contractVersion: bid.contract_version,
+    acceptedAt,
+  });
+
+  const halfAmount = Math.round(bid.bid_amount / 2).toLocaleString();
+
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "DWTB?! Studios <bids@dwtb.dev>",
+        to: [bid.bidder_email],
+        subject: "Allocation Accepted — DWTB?! Studios Q2 2026",
+        text: [
+          `${bid.bidder_name},`,
+          "",
+          "Your allocation request has been accepted.",
+          "",
+          "Attached you'll find:",
+          "  1. Your signed contract (PDF)",
+          "  2. Payment instructions with accepted methods",
+          "",
+          "Payment Schedule:",
+          `  Installment 1: $${halfAmount} — due within 7 business days`,
+          `  Installment 2: $${halfAmount} — due by May 15, 2026`,
+          "",
+          "Accepted methods: Zelle, Venmo, or wire transfer.",
+          "Details are in the attached payment instructions.",
+          "",
+          "Casey will be in touch within 24 hours to confirm onboarding details.",
+          "",
+          `Reference: ${bid.bid_id}`,
+          "",
+          "— Casey Glarkin, DWTB?! Studios",
+        ].join("\n"),
+        attachments: [
+          {
+            filename: `DWTB-Contract-${bid.bid_id.slice(0, 8)}.pdf`,
+            content: Buffer.from(contractPdf).toString("base64"),
+          },
+          {
+            filename: `DWTB-Payment-Instructions-${bid.bid_id.slice(0, 8)}.pdf`,
+            content: Buffer.from(paymentPdf).toString("base64"),
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    console.error("Acceptance email failed:", error);
+    appendAuditEntry({
+      eventType: "email_delivery_failed",
+      entityType: "bid",
+      entityId: bid.bid_id,
+      payload: { status: "accepted", error: String(error) },
+    });
+  }
+}
+
 async function sendStatusEmail(
   bid: {
-    id: string;
+    bid_id: string;
     bidder_email: string;
     bidder_name: string;
     bidder_company: string;
@@ -200,21 +241,17 @@ async function sendStatusEmail(
   if (!resendKey) return;
 
   const statusCopy: Record<string, { subject: string; body: string }> = {
-    accepted: {
-      subject: "Bid Accepted — DWTB?! Studios Q2 2026",
-      body: `${bid.bidder_name},\n\nYour bid has been accepted. Casey will be in touch within 24 hours to confirm next steps.\n\nBid Amount: $${Number(bid.bid_amount).toLocaleString()}\nReference: ${bid.id}\n\n— Casey Glarkin, DWTB?! Studios`,
-    },
     declined: {
-      subject: "Bid Update — DWTB?! Studios Q2 2026",
-      body: `${bid.bidder_name},\n\nYour bid was not selected for Q2. DWTB?! Studios will be running a limited Q3 window. Watch for an invite.\n\nReference: ${bid.id}\n\n— Casey Glarkin, DWTB?! Studios`,
+      subject: "Allocation Update — DWTB?! Studios Q2 2026",
+      body: `${bid.bidder_name},\n\nYour allocation request was not selected for Q2. DWTB?! Studios will be running a limited Q3 window. Watch for an invite.\n\nReference: ${bid.bid_id}\n\n— Casey Glarkin, DWTB?! Studios`,
     },
     waitlisted: {
-      subject: "Bid Waitlisted — DWTB?! Studios Q2 2026",
-      body: `${bid.bidder_name},\n\nYour bid is on the waitlist. If a slot opens before April 6, you will hear from us immediately.\n\nReference: ${bid.id}\n\n— Casey Glarkin, DWTB?! Studios`,
+      subject: "Allocation Waitlisted — DWTB?! Studios Q2 2026",
+      body: `${bid.bidder_name},\n\nYour allocation request is on the waitlist. If a slot opens before April 6, you will hear from us immediately.\n\nReference: ${bid.bid_id}\n\n— Casey Glarkin, DWTB?! Studios`,
     },
-    pending_review: {
-      subject: "Bid Under Review — DWTB?! Studios Q2 2026",
-      body: `${bid.bidder_name},\n\nYour bid is now under review. You will be notified of the outcome.\n\nReference: ${bid.id}\n\n— Casey Glarkin, DWTB?! Studios`,
+    paid: {
+      subject: "Payment Received — DWTB?! Studios Q2 2026",
+      body: `${bid.bidder_name},\n\nPayment has been received and confirmed. Onboarding details are coming within 48 hours.\n\nReference: ${bid.bid_id}\n\n— Casey Glarkin, DWTB?! Studios`,
     },
   };
 
@@ -237,16 +274,11 @@ async function sendStatusEmail(
     });
   } catch (error) {
     console.error("Status email failed:", error);
-    const supabase = createServiceClient();
-    await appendAuditEntry({
+    appendAuditEntry({
       eventType: "email_delivery_failed",
       entityType: "bid",
-      entityId: bid.id,
-      actorEmail: bid.bidder_email,
+      entityId: bid.bid_id,
       payload: { status: newStatus, error: String(error) },
     });
-
-    // This function is called as a standalone, so we need to import supabase again if needed
-    // Actually appendAuditEntry already handles its own client. No extra action needed.
   }
 }

@@ -23,11 +23,11 @@ export function VideoStage() {
     <section
       id="machine"
       ref={ref as React.RefObject<HTMLElement>}
-      className={`py-24 md:py-32 px-6 transition-opacity duration-700 ${isInView ? "opacity-100" : "opacity-0"}`}
+      className={`py-24 md:py-32 px-6 transition-all duration-700 ease-out ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
     >
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <h2 className="text-3xl md:text-5xl font-bold mb-4">The Machine</h2>
+        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 tracking-tight">The Machine</h2>
 
         {/* Signal loop */}
         <div className="font-mono text-sm md:text-base text-accent tracking-widest mb-8">

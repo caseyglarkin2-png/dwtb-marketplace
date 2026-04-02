@@ -1,85 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
 import { validateAdminRequest } from "@/lib/admin-auth";
-import { appendAuditEntry } from "@/lib/audit";
+import { getLeadStats } from "@/lib/clawd";
+import { FALLBACK_STATS } from "@/lib/constants";
 
-// GET /api/admin/stats — get current stats
+// GET /api/admin/stats — get current stats from Clawd + constants
 export async function GET(request: NextRequest) {
   const isAdmin = await validateAdminRequest(request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("stats_snapshot")
-    .select("*")
-    .order("as_of", { ascending: false })
-    .limit(5);
-
-  return NextResponse.json({ stats: data || [] });
+  try {
+    const clawdStats = await getLeadStats("dwtb");
+    return NextResponse.json({
+      stats: [{
+        proposals_sent: FALLBACK_STATS.proposalsSent,
+        total_views: FALLBACK_STATS.totalViews,
+        view_rate: FALLBACK_STATS.viewRate,
+        pipeline_value: FALLBACK_STATS.pipelineValue,
+        strike_now: FALLBACK_STATS.strikeNow,
+        total_leads: clawdStats.total,
+        new_leads: clawdStats.new,
+        last_24h: clawdStats.last_24h,
+        as_of: new Date().toISOString(),
+        source: "clawd+constants",
+      }],
+    });
+  } catch {
+    return NextResponse.json({
+      stats: [{
+        ...FALLBACK_STATS,
+        as_of: new Date().toISOString(),
+        source: "constants_only",
+      }],
+    });
+  }
 }
 
-// POST /api/admin/stats — update stats
+// POST /api/admin/stats — stats are derived from Clawd + constants
 export async function POST(request: NextRequest) {
   const isAdmin = await validateAdminRequest(request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: {
-    proposals_sent?: number;
-    total_views?: number;
-    view_rate?: number;
-    pipeline_value?: number;
-    strike_now?: number;
-  };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-
-  if (
-    typeof body.proposals_sent !== "number" ||
-    typeof body.total_views !== "number" ||
-    typeof body.view_rate !== "number" ||
-    typeof body.pipeline_value !== "number" ||
-    typeof body.strike_now !== "number"
-  ) {
-    return NextResponse.json(
-      { error: "All stats fields are required as numbers" },
-      { status: 400 }
-    );
-  }
-
-  const supabase = createServiceClient();
-  const { data, error } = await supabase
-    .from("stats_snapshot")
-    .insert({
-      proposals_sent: body.proposals_sent,
-      total_views: body.total_views,
-      view_rate: body.view_rate,
-      pipeline_value: body.pipeline_value,
-      strike_now: body.strike_now,
-      source: "admin",
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json(
-      { error: "Failed to update stats" },
-      { status: 500 }
-    );
-  }
-
-  await appendAuditEntry({
-    eventType: "slot_config_updated",
-    entityType: "stats_snapshot",
-    entityId: data.id,
-    payload: body,
-  });
-
-  return NextResponse.json({ stats: data }, { status: 201 });
+  return NextResponse.json(
+    { error: "Stats are derived from Clawd lead data and constants. Update FALLBACK_STATS in src/lib/constants.ts for base metrics." },
+    { status: 501 }
+  );
 }
