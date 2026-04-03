@@ -14,6 +14,10 @@ import { BidSection } from "@/components/sections/bid-section";
 import { DeadlineSection } from "@/components/sections/deadline-section";
 import { ExpiredState } from "@/components/sections/expired-state";
 import { OperatorClose } from "@/components/sections/operator-close";
+import OfferingsProof from "@/components/sections/offerings-proof";
+import OfferingsDefinition from "@/components/sections/offerings-definition";
+import OfferingsFitFilter from "@/components/sections/offerings-fit-filter";
+import OfferingsOperatingModel from "@/components/sections/offerings-operating-model";
 import { track } from "@/lib/analytics";
 
 const TrustSignals = dynamic(
@@ -146,6 +150,14 @@ export default function PartnersPage() {
             <>
               <BidSection />
               <div className="w-16 h-px bg-accent/40 mx-auto" />
+              <OfferingsProof />
+              <div className="w-16 h-px bg-accent/40 mx-auto" />
+              <OfferingsDefinition />
+              <div className="w-16 h-px bg-accent/40 mx-auto" />
+              <OfferingsFitFilter />
+              <div className="w-16 h-px bg-accent/40 mx-auto" />
+              <OfferingsOperatingModel />
+              <div className="w-16 h-px bg-accent/40 mx-auto" />
               <Suspense fallback={<SectionSkeleton height="h-96" />}>
                 <FAQSection />
               </Suspense>
@@ -159,15 +171,8 @@ export default function PartnersPage() {
 
           {/* Footer */}
           <footer className="py-8 px-6 text-center border-t border-border">
-            <div className="text-xs font-mono text-text-muted space-x-3">
-              <span>SHA-256 Secured</span>
-              <span className="text-accent/40">·</span>
-              <span>ESIGN Compliant</span>
-              <span className="text-accent/40">·</span>
-              <span>Invite-Only Platform</span>
-            </div>
-            <div className="mt-2 text-xs text-text-muted/50 font-mono">
-              DWTB?! Studios © {new Date().getFullYear()}
+            <div className="text-xs font-mono text-text-muted">
+              DWTB?! Studios © {new Date().getFullYear()} • Signal-driven GTM for freight
             </div>
           </footer>
         </main>
