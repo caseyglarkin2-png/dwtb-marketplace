@@ -37,10 +37,10 @@ export default function OfferingsProof() {
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
               Pipeline Influenced (14 days)
             </p>
-            <p className="text-3xl font-bold text-accent font-mono">$485K</p>
+            <p className="text-3xl font-bold text-accent font-mono">$635K</p>
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
-            In qualified pipeline detected and routed within 2 weeks of first contact. From accounts with zero prior brand awareness.
+            In qualified pipeline identified across three engagement tiers within the measurement window. From accounts with zero prior brand awareness.
           </p>
           <div className="pt-2 text-xs text-white/40 border-t border-white/5">
             Stage on contact: evaluation → decision phase
@@ -53,29 +53,29 @@ export default function OfferingsProof() {
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
               Active Buyer Detection
             </p>
-            <p className="text-3xl font-bold text-accent font-mono">17 accounts</p>
+            <p className="text-3xl font-bold text-accent font-mono">14 accounts</p>
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
-            In decision-phase momentum (multi-touch engagement, proposal review, meeting request) within 72 hours. Velocity matters.
+            In active buyer momentum (STRIKE_NOW and WATCH classifications showing multi-touch engagement and proposal review) within 72 hours.
           </p>
           <div className="pt-2 text-xs text-white/40 border-t border-white/5">
             Routing accuracy: matched to buying committee
           </div>
         </div>
 
-        {/* Card 4: Message-to-Buyer Match */}
+        {/* Card 4: Pipeline Velocity */}
         <div className="border border-white/10 rounded-lg p-6 bg-white/[0.02] space-y-4">
           <div className="space-y-1">
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
-              Message Match Response Lift
+              Pipeline Velocity
             </p>
-            <p className="text-3xl font-bold text-accent font-mono">3x</p>
+            <p className="text-3xl font-bold text-accent font-mono">38 prospects</p>
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
-            Higher engagement when using signal-matched messaging vs. generic cold outreach. Same offer, different frame.
+            Cold freight companies targeted with zero warm intros. The system identified, audited, and deployed personalized outreach across the full cohort.
           </p>
           <div className="pt-2 text-xs text-white/40 border-t border-white/5">
-            Test: controlled frame variation within same cohort
+            41 unique email opens, 13 clicks, 7 STRIKE_NOW
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function OfferingsProof() {
       <div className="bg-white/[0.02] rounded-lg p-6 border border-white/5 space-y-3">
         <p className="text-xs text-white/40 font-mono uppercase tracking-wider">Research Methodology</p>
         <p className="text-xs text-white/60 leading-relaxed">
-          <strong>Sample:</strong> 30 cold freight companies, zero warm intros, zero brand awareness. <strong>Timeframe:</strong> Q1 2026. <strong>Measurement:</strong> Signal-matched routing + real-time engagement tracking. <strong>Note:</strong> Your results will vary based on ICP clarity and market conditions.
+          <strong>Sample:</strong> 38 cold freight companies, zero warm intros, zero brand awareness. <strong>Timeframe:</strong> March 29 – April 3, 2026. <strong>Measurement:</strong> Email tracking (opens, clicks) + proposal page analytics (views, return visits). <strong>Note:</strong> Pipeline valuations estimated from target account profiles. Your results will vary based on ICP clarity and market conditions.
         </p>
       </div>
     </section>

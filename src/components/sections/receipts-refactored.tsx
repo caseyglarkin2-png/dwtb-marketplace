@@ -37,10 +37,10 @@ export default function ReceiptsRefactored() {
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
               Pipeline Influenced
             </p>
-            <p className="text-3xl font-bold text-accent font-mono">$485K</p>
+            <p className="text-3xl font-bold text-accent font-mono">$635K</p>
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
-            In qualified pipeline detected and routed to decision-phase momentum within 14 days of first contact. From accounts with zero prior brand awareness.
+            In qualified pipeline identified across three engagement tiers within the measurement window. From accounts with zero prior brand awareness.
           </p>
           <div className="pt-2 text-xs text-white/40 border-t border-white/5">
             Average deal stage: evaluation phase → negotiation phase
@@ -53,29 +53,29 @@ export default function ReceiptsRefactored() {
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
               Decision-Phase Detection
             </p>
-            <p className="text-3xl font-bold text-accent font-mono">17 accounts</p>
+            <p className="text-3xl font-bold text-accent font-mono">14 accounts</p>
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
-            Routed to active buyer momentum (multi-touch engagement, proposal review, meeting request) within 72 hours of first contact. Velocity matters.
+            In active buyer momentum (STRIKE_NOW and WATCH classifications showing multi-touch engagement and proposal review) within 72 hours.
           </p>
           <div className="pt-2 text-xs text-white/40 border-t border-white/5">
             Routing accuracy: matched to documented buying committee
           </div>
         </div>
 
-        {/* Card 4: Message Match */}
+        {/* Card 4: Pipeline Velocity */}
         <div className="border border-white/10 rounded-lg p-6 bg-white/[0.02] space-y-4">
           <div className="space-y-1">
             <p className="text-xs text-white/40 font-mono uppercase tracking-wider">
-              Message-to-Buyer Match
+              Pipeline Velocity
             </p>
-            <p className="text-3xl font-bold text-accent font-mono">3x response</p>
+            <p className="text-3xl font-bold text-accent font-mono">38 prospects</p>
           </div>
           <p className="text-sm text-white/70 leading-relaxed">
-            Lift vs. generic cold outreach when using signal-matched messaging and role-aware positioning. Same company, same offer, different framing.
+            Cold freight companies targeted with zero warm intros. The system identified, audited, and deployed personalized outreach across the full cohort.
           </p>
           <div className="pt-2 text-xs text-white/40 border-t border-white/5">
-            Controlled test: identical offer, different message frames
+            41 unique opens, 13 clicks, 7 in STRIKE_NOW tier
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function ReceiptsRefactored() {
       <div className="bg-white/[0.02] rounded-lg p-6 border border-white/5 space-y-3">
         <p className="text-xs text-white/40 font-mono uppercase tracking-wider">Research Methodology</p>
         <p className="text-xs text-white/60 leading-relaxed">
-          <strong>Sample:</strong> 30 freight and logistics companies, zero warm introductions, zero prior brand awareness. <strong>Timeframe:</strong> Q1 2026. <strong>Measurement:</strong> Signal-matched outreach with real-time engagement tracking and buyer routing validation. <strong>Scope:</strong> Cold outreach only; all prospects were unknown to DWTB?! Studios at contact time.
+          <strong>Sample:</strong> 38 freight and logistics companies, zero warm introductions, zero prior brand awareness. <strong>Timeframe:</strong> March 29 – April 3, 2026. <strong>Measurement:</strong> Email tracking (opens, clicks) + proposal page analytics (views, return visits). <strong>Scope:</strong> Cold outreach only; all prospects were unknown to DWTB?! Studios at contact time.
         </p>
         <p className="text-xs text-white/50 italic pt-2">
           Note: These are operational results, not benchmarks. Your results will vary based on ICP clarity, market conditions, and message fit.
